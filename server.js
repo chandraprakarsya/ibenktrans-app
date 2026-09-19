@@ -30,18 +30,20 @@ function getLocalDateStr(date) {
 let pool = null;
 if (process.env.DATABASE_URL) {
   try {
-    pool = new Pool({
+    const candidatePool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
-      connectionTimeoutMillis: 5000,
+      connectionTimeoutMillis: 2500,
       idleTimeoutMillis: 30000,
       max: 10
     });
-    // Uji koneksi secara asinkron tanpa memblokir startup server
-    pool.query('SELECT 1').then(() => {
+    // Uji koneksi tanpa memblokir startup; pool aktif hanya jika ping sukses
+    candidatePool.query('SELECT 1').then(() => {
       console.log('✓ Terhubung ke Supabase PostgreSQL Cloud Database');
+      pool = candidatePool;
     }).catch(err => {
-      console.warn(`⚠️ Gagal terhubung ke Supabase (${err.message}). Beralih otomatis ke penyimpanan lokal database.json.`);
+      console.warn(`⚠️ Gagal terhubung ke Supabase (${err.message}). Menggunakan penyimpanan lokal database.json.`);
+      try { candidatePool.end(); } catch(_) {}
       pool = null;
     });
   } catch (err) {
@@ -247,6 +249,7 @@ const dbService = {
       }
     }
     localDB.dataMobil = localDB.dataMobil.filter(m => Number(m.id) !== numId);
+    localDB.dataTransaksi = (localDB.dataTransaksi || []).filter(t => Number(t.mobil_id) !== numId);
     saveLocalDatabase();
     return true;
   },
@@ -607,10 +610,23 @@ function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   
-  if (!token) return res.status(401).json({ error: 'Akses ditolak, token tidak ada' });
+  if (!token) return res.status(401).json({ error: 'Akses ditolak, token tidak ditemukan' });
 
   jwt.verify(token, SECRET_KEY, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Token tidak valid / expired' });
+    if (err) {
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          error: 'Sesi Anda telah kedaluwarsa, silakan login kembali.',
+          code: 'TOKEN_EXPIRED',
+          expired: true
+        });
+      }
+      return res.status(403).json({
+        error: 'Token tidak valid, silakan login kembali.',
+        code: 'TOKEN_INVALID',
+        invalid: true
+      });
+    }
     req.user = user;
     next();
   });
@@ -673,14 +689,20 @@ app.post('/api/login', async (req, res) => {
     if (foundUser && foundUser.password === password) {
       // Jalankan pengecekan auto-archive asinkron saat login berhasil
       checkAndAutoArchiveMonthly().catch(e => console.error('[LOGIN ARCHIVE CHECK ERROR]', e));
-      const token = jwt.sign({ username: foundUser.username, role: foundUser.role }, SECRET_KEY, { expiresIn: '1d' });
-      return res.json({ token, username: foundUser.username, role: foundUser.role });
+      const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
+      const token = jwt.sign({ username: foundUser.username, role: foundUser.role }, SECRET_KEY, { expiresIn });
+      return res.json({ token, username: foundUser.username, role: foundUser.role, expiresIn });
     }
     return res.status(400).json({ error: 'Username atau Password salah!' });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: 'Terjadi kesalahan pada server database' });
   }
+});
+
+// Verifikasi token aktif
+app.get('/api/auth/me', authenticateToken, (req, res) => {
+  res.json({ valid: true, user: req.user });
 });
 
 // Endpoint Tambah User Baru (Khusus Admin)
@@ -714,7 +736,8 @@ app.post('/api/users', authenticateToken, requireRole('admin'), async (req, res)
 // HELPER AUTO-AVAILABILITY REALTIME
 // ===================================================
 function resolveMobilStatus(m, transaksiList) {
-  if (m.status_sewa && m.status_sewa.toLowerCase() === 'maintenance') {
+  const stLower = (m.status_sewa || '').toLowerCase();
+  if (stLower === 'maintenance' || stLower === 'servis') {
     return {
       status_sewa: 'Maintenance',
       tgl_kembali: m.tgl_kembali || '-'
@@ -739,14 +762,6 @@ function resolveMobilStatus(m, transaksiList) {
     };
   }
 
-  // Pertahankan status manual 'Disewa' jika tgl_kembali masih aktif (>= hari ini)
-  if (m.status_sewa && m.status_sewa.toLowerCase() === 'disewa' && m.tgl_kembali && m.tgl_kembali !== '-' && m.tgl_kembali >= today) {
-    return {
-      status_sewa: 'Disewa',
-      tgl_kembali: m.tgl_kembali
-    };
-  }
-
   return {
     status_sewa: 'Tersedia',
     tgl_kembali: '-'
@@ -763,6 +778,9 @@ app.get('/api/mobil', authenticateToken, async (req, res) => {
 
     const result = mobilList.map(m => {
       const dynamicStatus = resolveMobilStatus(m, txList);
+      if (m.status_sewa !== dynamicStatus.status_sewa || m.tgl_kembali !== dynamicStatus.tgl_kembali) {
+        dbService.updateMobilStatus(m.id, dynamicStatus.status_sewa, dynamicStatus.tgl_kembali).catch(() => {});
+      }
       return {
         ...m,
         status_sewa: dynamicStatus.status_sewa,
@@ -805,11 +823,20 @@ app.put('/api/mobil/:id/status', authenticateToken, requireRole('admin'), async 
   const id = parseInt(req.params.id);
   const { status_sewa, tgl_kembali } = req.body;
 
+  let normStatus = status_sewa;
+  if (status_sewa) {
+    const sLower = status_sewa.toLowerCase();
+    if (sLower === 'sewa' || sLower === 'disewa') normStatus = 'Disewa';
+    else if (sLower === 'maintenance' || sLower === 'servis') normStatus = 'Maintenance';
+    else normStatus = 'Tersedia';
+  }
+  const cleanTgl = (normStatus === 'Tersedia') ? '-' : (tgl_kembali || '-');
+
   try {
     const updated = await dbService.updateMobilStatus(
       id,
-      status_sewa ? (status_sewa.charAt(0).toUpperCase() + status_sewa.slice(1)) : undefined,
-      tgl_kembali
+      normStatus,
+      cleanTgl
     );
     if (!updated) return res.status(404).json({ error: 'Armada tidak ditemukan!' });
     res.json({ message: 'Status armada berhasil diperbarui!', data: updated });
@@ -885,13 +912,17 @@ app.get('/api/transaksi', authenticateToken, async (req, res) => {
 
 app.post('/api/transaksi', authenticateToken, requireRole('admin'), async (req, res) => {
   const { mobil_id, tanggal, tgl_kembali, penyewa, tarif, tarif_sewa, biaya_bbm, biaya_servis, biaya_lainnya, keterangan } = req.body;
+  if (!mobil_id || isNaN(parseInt(mobil_id))) {
+    return res.status(400).json({ error: 'Armada mobil wajib dipilih!' });
+  }
+  const numMobilId = parseInt(mobil_id);
   const tarifNilai = parseFloat(tarif !== undefined ? tarif : tarif_sewa) || 0;
   const tglMulai = tanggal || getLocalDateStr();
   const tglSelesai = tgl_kembali || tglMulai;
 
   try {
     const newTx = await dbService.addTransaksi({
-      mobil_id: parseInt(mobil_id),
+      mobil_id: numMobilId,
       tanggal: tglMulai,
       tgl_mulai: tglMulai,
       tgl_kembali: tglSelesai,
@@ -903,6 +934,13 @@ app.post('/api/transaksi', authenticateToken, requireRole('admin'), async (req, 
       biaya_lainnya: parseFloat(biaya_lainnya) || 0,
       keterangan: keterangan ? keterangan.trim() : '-'
     });
+
+    // Jika sewa aktif hari ini, update status armada menjadi Disewa secara otomatis
+    const today = getLocalDateStr();
+    if (tglMulai <= today && today <= tglSelesai) {
+      await dbService.updateMobilStatus(numMobilId, 'Disewa', tglSelesai);
+    }
+
     res.json({ message: 'Transaksi berhasil disimpan!', data: newTx });
   } catch (e) {
     console.error(e);
@@ -914,13 +952,21 @@ app.post('/api/transaksi', authenticateToken, requireRole('admin'), async (req, 
 app.put('/api/transaksi/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   const id = parseInt(req.params.id);
   const { mobil_id, tanggal, tgl_kembali, penyewa, tarif, tarif_sewa, biaya_bbm, biaya_servis, biaya_lainnya, keterangan } = req.body;
+  if (!mobil_id || isNaN(parseInt(mobil_id))) {
+    return res.status(400).json({ error: 'Armada mobil wajib dipilih!' });
+  }
+  const numMobilId = parseInt(mobil_id);
   const tarifNilai = parseFloat(tarif !== undefined ? tarif : tarif_sewa) || 0;
   const tglMulai = tanggal || getLocalDateStr();
   const tglSelesai = tgl_kembali || tglMulai;
 
   try {
+    const allTxBefore = await dbService.getTransaksi();
+    const oldTx = allTxBefore.find(t => Number(t.id) === id);
+    const oldMobilId = oldTx ? Number(oldTx.mobil_id) : null;
+
     const updated = await dbService.updateTransaksi(id, {
-      mobil_id: parseInt(mobil_id),
+      mobil_id: numMobilId,
       tanggal: tglMulai,
       tgl_mulai: tglMulai,
       tgl_kembali: tglSelesai,
@@ -933,6 +979,21 @@ app.put('/api/transaksi/:id', authenticateToken, requireRole('admin'), async (re
       keterangan: keterangan !== undefined ? keterangan.trim() : undefined
     });
     if (!updated) return res.status(404).json({ error: 'Transaksi tidak ditemukan!' });
+
+    // Refresh status kedua armada yang terdampak (mobil lama dan mobil baru)
+    const remainingTx = await dbService.getTransaksi();
+    const allMobil = await dbService.getMobil();
+    const affectedIds = new Set([numMobilId]);
+    if (oldMobilId) affectedIds.add(oldMobilId);
+
+    for (const mid of affectedIds) {
+      const targetMobil = allMobil.find(m => Number(m.id) === mid);
+      if (targetMobil) {
+        const resolved = resolveMobilStatus(targetMobil, remainingTx);
+        await dbService.updateMobilStatus(targetMobil.id, resolved.status_sewa, resolved.tgl_kembali);
+      }
+    }
+
     res.json({ message: 'Transaksi berhasil diperbarui!', data: updated });
   } catch (e) {
     console.error(e);
@@ -944,7 +1005,22 @@ app.put('/api/transaksi/:id', authenticateToken, requireRole('admin'), async (re
 app.delete('/api/transaksi/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
+    const allTx = await dbService.getTransaksi();
+    const targetTx = allTx.find(t => Number(t.id) === id);
+
     await dbService.deleteTransaksi(id);
+
+    // Jika transaksi yang dihapus terkait mobil tertentu, refresh status ketersediaan armada
+    if (targetTx && targetTx.mobil_id) {
+      const remainingTx = await dbService.getTransaksi();
+      const allMobil = await dbService.getMobil();
+      const targetMobil = allMobil.find(m => Number(m.id) === Number(targetTx.mobil_id));
+      if (targetMobil) {
+        const resolved = resolveMobilStatus(targetMobil, remainingTx);
+        await dbService.updateMobilStatus(targetMobil.id, resolved.status_sewa, resolved.tgl_kembali);
+      }
+    }
+
     res.json({ message: 'Transaksi berhasil dihapus!' });
   } catch (e) {
     console.error(e);
@@ -1022,6 +1098,14 @@ app.get('/api/laporan/dashboard', authenticateToken, async (req, res) => {
       total_biaya = Number(archivedSnapshot.total_biaya);
     }
 
+    const total_porsi_pengelola = archivedSnapshot && archivedSnapshot.total_porsi_pengelola !== undefined
+      ? Number(archivedSnapshot.total_porsi_pengelola)
+      : detailMobil.reduce((s, d) => s + (d.porsi_pengelola || 0), 0);
+
+    const total_porsi_investor = archivedSnapshot && archivedSnapshot.total_porsi_investor !== undefined
+      ? Number(archivedSnapshot.total_porsi_investor)
+      : detailMobil.reduce((s, d) => s + (d.porsi_investor || 0), 0);
+
     const trendMap = {};
     filteredTx.forEach(t => {
       const tgl = t.tanggal || 'Unknown';
@@ -1080,6 +1164,8 @@ app.get('/api/laporan/dashboard', authenticateToken, async (req, res) => {
         total_pendapatan,
         total_biaya,
         total_keuntungan_bersih: total_pendapatan - total_biaya,
+        total_porsi_pengelola,
+        total_porsi_investor,
         is_archived: isArchived
       },
       detail_unit: detailMobil,
@@ -1137,12 +1223,13 @@ app.post('/api/riwayat-bulanan/tutup-buku', authenticateToken, requireRole('admi
 // Laporan Investor (Hanya untuk Admin & Investor)
 app.get('/api/laporan/investor', authenticateToken, requireRole('admin', 'investor'), async (req, res) => {
   try {
+    await checkAndAutoArchiveMonthly();
     const { filter, start, end, mobil_id } = req.query;
     const allTx = await dbService.getTransaksi();
     const allMobil = await dbService.getMobil();
     const filteredTx = filterTxByPeriod(allTx, filter, start, end);
 
-    let mobilInvestor = allMobil.filter(m => m.kepemilikan && m.kepemilikan.toLowerCase() === 'investor');
+    let mobilInvestor = allMobil.filter(m => m.kepemilikan && m.kepemilikan.toLowerCase().includes('investor'));
     if (mobil_id && mobil_id !== 'all') {
       const targetId = parseInt(mobil_id);
       mobilInvestor = mobilInvestor.filter(m => Number(m.id) === Number(targetId));
@@ -1168,7 +1255,7 @@ app.get('/api/laporan/investor', authenticateToken, requireRole('admin', 'invest
       const bia = bbm + servis + lainnya;
       const laba_bersih = pend - bia;
 
-      if (tx.length > 0) {
+      if (tx.length > 0 || (mobil_id && mobil_id !== 'all')) {
         total_pendapatan += pend;
         total_biaya += bia;
         total_bbm_all += bbm;
@@ -1225,6 +1312,7 @@ app.get('/api/laporan/investor', authenticateToken, requireRole('admin', 'invest
 // ===================================================
 app.get('/api/laporan/keseluruhan', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
+    await checkAndAutoArchiveMonthly();
     const { filter, start, end, kategori_unit, mobil_id } = req.query;
     const allTx = await dbService.getTransaksi();
     const allMobil = await dbService.getMobil();
@@ -1242,7 +1330,7 @@ app.get('/api/laporan/keseluruhan', authenticateToken, requireRole('admin'), asy
 
     // Filter armada berdasarkan kategori_unit: 'all', 'investor', atau 'sendiri'
     let targetMobil = allMobil.filter(m => {
-      const isInv = m.kepemilikan && m.kepemilikan.toLowerCase() === 'investor';
+      const isInv = m.kepemilikan && m.kepemilikan.toLowerCase().includes('investor');
       if (kategori_unit === 'investor') return isInv;
       if (kategori_unit === 'sendiri') return !isInv;
       return true;
@@ -1266,7 +1354,7 @@ app.get('/api/laporan/keseluruhan', authenticateToken, requireRole('admin'), asy
       const laba_bersih = pend - bia;
 
       if (tx.length > 0 || (mobil_id && mobil_id !== 'all')) {
-        const isInv = m.kepemilikan && m.kepemilikan.toLowerCase() === 'investor';
+        const isInv = m.kepemilikan && m.kepemilikan.toLowerCase().includes('investor');
         const porsi_peng = isInv ? Math.round(pend * 0.30) : laba_bersih;
         const porsi_inv = isInv ? (Math.round(pend * 0.70) - bia) : 0;
 

@@ -64,6 +64,15 @@
         <p class="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Rental Accounting - Majalengka</p>
       </div>
 
+      <!-- Alert Banner untuk pesan auto-logout / peringatan sesi inaktif -->
+      <div id="login-alert-banner" class="hidden mb-4 p-3.5 rounded-xl border text-xs font-semibold flex items-start gap-2.5 transition-all">
+        <i id="login-alert-icon" class="fa-solid fa-circle-info text-base mt-0.5 shrink-0"></i>
+        <div class="flex-1">
+          <p id="login-alert-title" class="font-bold text-xs"></p>
+          <p id="login-alert-msg" class="text-[11px] mt-0.5 leading-relaxed opacity-95"></p>
+        </div>
+      </div>
+
       <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4">
         <div>
           <label class="block text-xs font-bold text-gray-600 mb-1">Username</label>
@@ -165,7 +174,13 @@
             </button>
 
             <!-- Dropdown Menu -->
-            <div id="profile-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-30">
+            <div id="profile-menu" class="hidden absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-30">
+              <div class="px-4 py-2 border-b border-gray-100 bg-gray-50/70">
+                <p class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Proteksi Sesi Aktif</p>
+                <p class="text-[11px] text-gray-700 font-bold flex items-center gap-1.5 mt-0.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Auto-Logout: 15 Menit
+                </p>
+              </div>
               <a href="#" onclick="openCreateUserModal(); return false;" id="menu-create-user" class="px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                 <i class="fa-solid fa-user-plus text-green-700"></i> Buat User Baru
               </a>
@@ -194,12 +209,13 @@
               <p class="text-xs text-gray-500">Pantau performa keuangan harian dan status armada secara real-time.</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-              <select id="dashboard-filter-select" onchange="loadDashboard()" class="text-xs border border-gray-300 rounded-lg px-2.5 py-1.5 font-bold focus:ring-2 focus:ring-green-600 focus:outline-none bg-white shadow-2xs flex-1 sm:flex-none">
+              <select id="dashboard-filter-select" onchange="onGlobalFilterChange('dashboard', this.value)" class="text-xs border border-gray-300 rounded-lg px-2.5 py-1.5 font-bold focus:ring-2 focus:ring-green-600 focus:outline-none bg-white shadow-2xs flex-1 sm:flex-none">
                 <optgroup label="Siklus Berjalan">
                   <option value="bulan_ini" selected>📅 Bulan Ini (Siklus Aktif)</option>
                   <option value="hari_ini">Hari Ini</option>
                   <option value="7_hari">7 Hari Terakhir</option>
                   <option value="all">Semua Waktu (Akumulasi Total)</option>
+                  <option value="custom">Custom Tanggal</option>
                 </optgroup>
                 <optgroup id="optgroup-riwayat-arsip" label="📁 Riwayat Arsip Bulanan (Tutup Buku)">
                 </optgroup>
@@ -355,12 +371,13 @@
               <p class="text-xs text-gray-500">Input transaksi sewa, BBM, servis, dan pengeluaran armada.</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-              <select id="transaksi-filter-select" onchange="loadTransaksi()" class="text-xs border border-gray-300 rounded-lg px-2.5 py-1.5 font-bold focus:ring-2 focus:ring-green-600 focus:outline-none bg-white shadow-2xs flex-1 sm:flex-none">
+              <select id="transaksi-filter-select" onchange="onGlobalFilterChange('transaksi', this.value)" class="text-xs border border-gray-300 rounded-lg px-2.5 py-1.5 font-bold focus:ring-2 focus:ring-green-600 focus:outline-none bg-white shadow-2xs flex-1 sm:flex-none">
                 <optgroup label="Siklus Berjalan">
                   <option value="bulan_ini" selected>📅 Bulan Ini (Siklus Baru)</option>
                   <option value="hari_ini">Hari Ini</option>
                   <option value="7_hari">7 Hari Terakhir</option>
                   <option value="all">Semua Transaksi (Akumulasi)</option>
+                  <option value="custom">Custom Tanggal</option>
                 </optgroup>
                 <optgroup id="optgroup-transaksi-arsip" label="📁 Riwayat Arsip Bulanan (Tutup Buku)">
                 </optgroup>
@@ -436,12 +453,16 @@
             <!-- Pilihan Periode Waktu -->
             <div class="flex items-center gap-2 w-full sm:w-auto">
               <span class="text-xs font-bold text-gray-600 shrink-0"><i class="fa-solid fa-filter mr-1 text-custom-green"></i> Periode:</span>
-              <select id="report-filter-type" onchange="onReportFilterChange()" class="border rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-green-600 focus:outline-none flex-1 sm:flex-none">
-                <option value="all">Semua Waktu (Realtime)</option>
-                <option value="hari_ini">Hari Ini</option>
-                <option value="7_hari">7 Hari Terakhir</option>
-                <option value="bulan_ini">Bulan Ini</option>
-                <option value="custom">Custom Tanggal</option>
+              <select id="report-filter-type" onchange="onReportFilterChange()" class="border rounded-lg px-2.5 py-1.5 text-xs font-bold focus:ring-2 focus:ring-green-600 focus:outline-none flex-1 sm:flex-none">
+                <optgroup label="Siklus Berjalan">
+                  <option value="bulan_ini" selected>📅 Bulan Ini (Siklus Berjalan)</option>
+                  <option value="hari_ini">Hari Ini</option>
+                  <option value="7_hari">7 Hari Terakhir</option>
+                  <option value="all">Semua Waktu (Akumulasi Total)</option>
+                  <option value="custom">Custom Tanggal</option>
+                </optgroup>
+                <optgroup id="optgroup-report-arsip" label="📁 Riwayat Arsip Bulanan (Tutup Buku)">
+                </optgroup>
               </select>
             </div>
 
@@ -449,7 +470,7 @@
               <input type="date" id="report-start" class="border rounded-lg px-2 py-1 text-xs focus:outline-none flex-1">
               <span class="text-xs font-bold text-gray-500">s/d</span>
               <input type="date" id="report-end" class="border rounded-lg px-2 py-1 text-xs focus:outline-none flex-1">
-              <button onclick="loadReport()" class="bg-custom-green text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-custom-hover active:scale-95">Terapkan</button>
+              <button type="button" onclick="applyGlobalCustomDates(document.getElementById('report-start').value, document.getElementById('report-end').value)" class="bg-custom-green text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-custom-hover active:scale-95">Terapkan</button>
             </div>
           </div>
 
@@ -525,18 +546,22 @@
               <!-- FILTER PERIODE -->
               <div class="flex flex-wrap items-center gap-2">
                 <span class="text-xs font-bold text-gray-600"><i class="fa-solid fa-filter mr-1 text-custom-green"></i> Periode:</span>
-                <select id="allreport-filter-type" onchange="onAllReportFilterChange()" class="border rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-green-600 focus:outline-none">
-                  <option value="all">Semua Waktu (Realtime)</option>
-                  <option value="bulan_ini">Bulan Ini</option>
-                  <option value="hari_ini">Hari Ini</option>
-                  <option value="7_hari">7 Hari Terakhir</option>
-                  <option value="custom">Custom Tanggal</option>
+                <select id="allreport-filter-type" onchange="onAllReportFilterChange()" class="border rounded-lg px-2.5 py-1.5 text-xs font-bold focus:ring-2 focus:ring-green-600 focus:outline-none">
+                  <optgroup label="Siklus Berjalan">
+                    <option value="bulan_ini" selected>📅 Bulan Ini (Siklus Berjalan)</option>
+                    <option value="hari_ini">Hari Ini</option>
+                    <option value="7_hari">7 Hari Terakhir</option>
+                    <option value="all">Semua Waktu (Akumulasi Total)</option>
+                    <option value="custom">Custom Tanggal</option>
+                  </optgroup>
+                  <optgroup id="optgroup-allreport-arsip" label="📁 Riwayat Arsip Bulanan (Tutup Buku)">
+                  </optgroup>
                 </select>
                 <div id="allreport-custom-date-inputs" class="hidden flex items-center gap-2">
                   <input type="date" id="allreport-start" class="border rounded-lg px-2.5 py-1.5 text-xs focus:outline-none">
                   <span class="text-xs font-bold text-gray-500">s/d</span>
                   <input type="date" id="allreport-end" class="border rounded-lg px-2.5 py-1.5 text-xs focus:outline-none">
-                  <button onclick="loadAllReport()" class="bg-custom-green text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-custom-hover">Terapkan</button>
+                  <button type="button" onclick="applyGlobalCustomDates(document.getElementById('allreport-start').value, document.getElementById('allreport-end').value)" class="bg-custom-green text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-custom-hover">Terapkan</button>
                 </div>
               </div>
             </div>
@@ -937,8 +962,165 @@
     const BASE_URL = window.location.origin;
     let lineChart, barChart, pieChart;
     let cachedTransaksiList = [];
+    let cachedArchivesList = [];
+    let currentTab = 'dashboard';
+    let globalActiveFilter = 'bulan_ini';
+    let globalStartDate = '';
+    let globalEndDate = '';
+    let currentAllReportCategory = 'all';
 
-    // Helper API Fetch
+    // =========================================================================
+    // SISTEM IDLE TIMEOUT & AUTO-LOGOUT REALTIME (15 MENIT)
+    // =========================================================================
+    const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 Menit (900.000 ms)
+    let idleCheckTimer = null;
+    let lastActivityThrottle = 0;
+    const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+
+    function recordUserActivity() {
+      const now = Date.now();
+      // Throttle pencatatan aktivitas maksimal 1x per 2 detik demi performa tinggi
+      if (now - lastActivityThrottle > 2000) {
+        lastActivityThrottle = now;
+        localStorage.setItem('ibenk_last_activity', now.toString());
+      }
+    }
+
+    function checkIdleStatus() {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const lastActivity = Number(localStorage.getItem('ibenk_last_activity') || Date.now());
+      const idleDuration = Date.now() - lastActivity;
+
+      if (idleDuration >= IDLE_TIMEOUT_MS) {
+        triggerLogout('idle');
+      }
+    }
+
+    function startIdleTracker() {
+      // Set timestamp awal aktivitas
+      const now = Date.now();
+      localStorage.setItem('ibenk_last_activity', now.toString());
+      lastActivityThrottle = now;
+
+      // Pasang event listener aktivitas pengguna
+      ACTIVITY_EVENTS.forEach(evt => {
+        window.addEventListener(evt, recordUserActivity, { passive: true });
+      });
+
+      // Interval pemeriksaan idle periodik setiap 10 detik
+      if (idleCheckTimer) clearInterval(idleCheckTimer);
+      idleCheckTimer = setInterval(checkIdleStatus, 10000);
+
+      // Tangani saat tab browser dibuka kembali dari background / sleep mode
+      document.addEventListener('visibilitychange', onVisibilityOrFocusChange);
+      window.addEventListener('focus', onVisibilityOrFocusChange);
+    }
+
+    function stopIdleTracker() {
+      ACTIVITY_EVENTS.forEach(evt => {
+        window.removeEventListener(evt, recordUserActivity);
+      });
+      if (idleCheckTimer) {
+        clearInterval(idleCheckTimer);
+        idleCheckTimer = null;
+      }
+      document.removeEventListener('visibilitychange', onVisibilityOrFocusChange);
+      window.removeEventListener('focus', onVisibilityOrFocusChange);
+    }
+
+    function onVisibilityOrFocusChange() {
+      if (document.visibilityState === 'visible') {
+        checkIdleStatus();
+      }
+    }
+
+    // Sinkronisasi status logout lintas-tab browser
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'token' && !e.newValue) {
+        // Tab lain melakukan logout
+        triggerLogout('storage');
+      }
+    });
+
+    // Tampilkan notifikasi peringatan di layar login
+    function showLoginAlert(type, title, message) {
+      const banner = document.getElementById('login-alert-banner');
+      const icon = document.getElementById('login-alert-icon');
+      const titleEl = document.getElementById('login-alert-title');
+      const msgEl = document.getElementById('login-alert-msg');
+      if (!banner) return;
+
+      banner.className = 'mb-4 p-3.5 rounded-xl border text-xs font-semibold flex items-start gap-2.5 transition-all';
+      if (type === 'idle') {
+        banner.classList.add('bg-amber-50', 'border-amber-300', 'text-amber-900');
+        icon.className = 'fa-solid fa-clock-rotate-left text-base mt-0.5 shrink-0 text-amber-600';
+      } else if (type === 'expired') {
+        banner.classList.add('bg-red-50', 'border-red-300', 'text-red-900');
+        icon.className = 'fa-solid fa-triangle-exclamation text-base mt-0.5 shrink-0 text-red-600';
+      } else if (type === 'manual') {
+        banner.classList.add('bg-emerald-50', 'border-emerald-300', 'text-emerald-900');
+        icon.className = 'fa-solid fa-circle-check text-base mt-0.5 shrink-0 text-emerald-600';
+      } else {
+        banner.classList.add('bg-blue-50', 'border-blue-300', 'text-blue-900');
+        icon.className = 'fa-solid fa-circle-info text-base mt-0.5 shrink-0 text-blue-600';
+      }
+
+      titleEl.innerText = title;
+      msgEl.innerText = message;
+      banner.classList.remove('hidden');
+    }
+
+    function hideLoginAlert() {
+      const banner = document.getElementById('login-alert-banner');
+      if (banner) banner.classList.add('hidden');
+    }
+
+    function showLoginScreen() {
+      stopIdleTracker();
+      document.getElementById('auth-container').classList.remove('hidden');
+      document.getElementById('app-container').classList.add('hidden');
+      const profileMenu = document.getElementById('profile-menu');
+      if (profileMenu) profileMenu.classList.add('hidden');
+    }
+
+    function triggerLogout(reason = 'manual') {
+      stopIdleTracker();
+
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      localStorage.removeItem('username');
+      localStorage.removeItem('ibenk_last_activity');
+
+      showLoginScreen();
+
+      if (reason === 'idle') {
+        showLoginAlert(
+          'idle',
+          'Sesi Berakhir (Tidak Ada Aktivitas)',
+          'Anda telah keluar secara otomatis karena tidak ada aktivitas selama 15 menit. Silakan masuk kembali.'
+        );
+      } else if (reason === 'expired') {
+        showLoginAlert(
+          'expired',
+          'Sesi Kedaluwarsa',
+          'Masa aktif sesi/token login Anda telah berakhir. Silakan masuk kembali untuk melanjutkan.'
+        );
+      } else if (reason === 'manual') {
+        showLoginAlert(
+          'manual',
+          'Berhasil Keluar',
+          'Anda telah keluar dari aplikasi secara aman.'
+        );
+      }
+    }
+
+    function logout() {
+      triggerLogout('manual');
+    }
+
+    // Helper API Fetch dengan Penanganan Token Expired Otomatis
     async function apiFetch(url, options = {}) {
       const token = localStorage.getItem('token');
       const headers = {
@@ -949,8 +1131,10 @@
 
       const res = await fetch(`${BASE_URL}${url}`, { ...options, headers });
       if (res.status === 401 || res.status === 403) {
-        if (token && res.status === 401) logout();
         const errData = await res.json().catch(() => ({}));
+        if (token) {
+          triggerLogout('expired');
+        }
         throw new Error(errData.error || 'Akses ditolak atau sesi telah berakhir');
       }
       const data = await res.json().catch(() => ({}));
@@ -968,8 +1152,11 @@
     // Auth Handlers
     async function handleLogin(e) {
       e.preventDefault();
-      const username = document.getElementById('login-username').value;
-      const password = document.getElementById('login-password').value;
+      hideLoginAlert();
+      const usernameInput = document.getElementById('login-username');
+      const passwordInput = document.getElementById('login-password');
+      const username = usernameInput ? usernameInput.value.trim() : '';
+      const password = passwordInput ? passwordInput.value : '';
 
       try {
         const res = await fetch(`${BASE_URL}/api/login`, {
@@ -984,21 +1171,14 @@
         localStorage.setItem('token', data.token);
         localStorage.setItem('role', data.role);
         localStorage.setItem('username', data.username);
+        localStorage.setItem('ibenk_last_activity', Date.now().toString());
 
-        initApp();
+        if (passwordInput) passwordInput.value = '';
+
+        await initApp();
       } catch (err) {
-        alert(err.message);
+        showLoginAlert('expired', 'Gagal Masuk', err.message);
       }
-    }
-
-    function logout() {
-      localStorage.removeItem('token');
-      localStorage.removeItem('role');
-      localStorage.removeItem('username');
-      document.getElementById('auth-container').classList.remove('hidden');
-      document.getElementById('app-container').classList.add('hidden');
-      const profileMenu = document.getElementById('profile-menu');
-      if (profileMenu) profileMenu.classList.add('hidden');
     }
 
     // Profile Menu Toggle
@@ -1047,15 +1227,170 @@
       }
     }
 
-    function initApp() {
+    // =========================================================================
+    // UNIFIED PERIOD FILTER & CROSS-MODULE SYNCHRONIZATION
+    // =========================================================================
+    function syncFilterSelects(val) {
+      const ids = [
+        'dashboard-filter-select',
+        'transaksi-filter-select',
+        'report-filter-type',
+        'allreport-filter-type'
+      ];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.value = val;
+        }
+      });
+
+      // Toggle custom date containers if 'custom' is active
+      const isCustom = val === 'custom';
+      const customReport = document.getElementById('custom-date-inputs');
+      const customAllReport = document.getElementById('allreport-custom-date-inputs');
+      if (customReport) customReport.classList.toggle('hidden', !isCustom);
+      if (customAllReport) customAllReport.classList.toggle('hidden', !isCustom);
+
+      if (isCustom) {
+        if (globalStartDate) {
+          const s1 = document.getElementById('report-start');
+          const s2 = document.getElementById('allreport-start');
+          if (s1) s1.value = globalStartDate;
+          if (s2) s2.value = globalStartDate;
+        }
+        if (globalEndDate) {
+          const e1 = document.getElementById('report-end');
+          const e2 = document.getElementById('allreport-end');
+          if (e1) e1.value = globalEndDate;
+          if (e2) e2.value = globalEndDate;
+        }
+      }
+    }
+
+    function onGlobalFilterChange(source, newFilter) {
+      globalActiveFilter = newFilter;
+      syncFilterSelects(newFilter);
+
+      if (newFilter !== 'custom') {
+        refreshActiveTab();
+      }
+    }
+
+    function onReportFilterChange() {
+      const sel = document.getElementById('report-filter-type');
+      if (sel) onGlobalFilterChange('report', sel.value);
+    }
+
+    function onAllReportFilterChange() {
+      const sel = document.getElementById('allreport-filter-type');
+      if (sel) onGlobalFilterChange('all-report', sel.value);
+    }
+
+    function applyGlobalCustomDates(start, end) {
+      if (!start || !end) {
+        alert('Mohon tentukan tanggal awal dan tanggal akhir!');
+        return;
+      }
+      if (start > end) {
+        alert('Tanggal awal tidak boleh lebih besar dari tanggal akhir!');
+        return;
+      }
+      globalActiveFilter = 'custom';
+      globalStartDate = start;
+      globalEndDate = end;
+      syncFilterSelects('custom');
+      refreshActiveTab();
+    }
+
+    async function populateAllFilterDropdowns() {
+      try {
+        const archives = await apiFetch('/api/riwayat-bulanan');
+        cachedArchivesList = archives || [];
+
+        const optgroups = [
+          document.getElementById('optgroup-riwayat-arsip'),
+          document.getElementById('optgroup-transaksi-arsip'),
+          document.getElementById('optgroup-report-arsip'),
+          document.getElementById('optgroup-allreport-arsip')
+        ];
+
+        optgroups.forEach(og => {
+          if (!og) return;
+          og.innerHTML = '';
+          if (cachedArchivesList.length === 0) {
+            og.innerHTML = '<option disabled class="text-gray-400">Belum ada riwayat tutup buku</option>';
+          } else {
+            cachedArchivesList.forEach(a => {
+              const opt = document.createElement('option');
+              opt.value = `archive:${a.periode}`;
+              opt.innerText = `📁 ${a.nama_bulan} ${a.tahun} (Tutup Buku - ${a.total_transaksi || 0} trx)`;
+              og.appendChild(opt);
+            });
+          }
+        });
+
+        syncFilterSelects(globalActiveFilter);
+      } catch (err) {
+        console.warn('Gagal memuat opsi riwayat arsip:', err);
+      }
+    }
+
+    // Refresh active tab based on currentTab state
+    async function refreshActiveTab() {
+      if (currentTab === 'dashboard') await loadDashboard();
+      else if (currentTab === 'armada') await loadArmada();
+      else if (currentTab === 'transaksi') await loadTransaksi();
+      else if (currentTab === 'report') await loadReport();
+      else if (currentTab === 'all-report') await loadAllReport();
+    }
+
+    // Centralized master refresh: keeps all 5 modules completely synchronized
+    async function refreshAllModules() {
+      await populateAllFilterDropdowns();
+      await populateReportMobilDropdown();
+      await populateAllReportMobilDropdown();
+      await loadArmada();
+      await refreshActiveTab();
+    }
+
+    // =========================================================================
+    // INITIALIZATION & TAB NAVIGATION
+    // =========================================================================
+    async function initApp() {
       const token = localStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        showLoginScreen();
+        return;
+      }
+
+      // 1. Periksa apakah sesi sebelumnya sudah inaktif melebihi batas 15 menit
+      const lastAct = Number(localStorage.getItem('ibenk_last_activity') || 0);
+      if (lastAct && (Date.now() - lastAct >= IDLE_TIMEOUT_MS)) {
+        triggerLogout('idle');
+        return;
+      }
+
+      // 2. Verifikasi validitas token ke server backend
+      try {
+        const verify = await apiFetch('/api/auth/me');
+        if (!verify || !verify.valid) {
+          triggerLogout('expired');
+          return;
+        }
+      } catch (err) {
+        // apiFetch otomatis memanggil triggerLogout('expired')
+        return;
+      }
+
+      // 3. Aktifkan sistem pemantau aktivitas (idle tracker)
+      startIdleTracker();
 
       const role = (localStorage.getItem('role') || 'admin').toLowerCase();
       const username = localStorage.getItem('username') || 'User';
 
       document.getElementById('auth-container').classList.add('hidden');
       document.getElementById('app-container').classList.remove('hidden');
+      hideLoginAlert();
 
       document.getElementById('user-display-name').innerText = username;
       const roleBadge = document.getElementById('user-role-badge');
@@ -1089,7 +1424,6 @@
       const mobNavAllReport = document.getElementById('mob-nav-all-report');
 
       if (role === 'supir') {
-        // SUPIR: Hanya melihat Dashboard
         if (navDashboard) navDashboard.classList.remove('hidden');
         if (navArmada) navArmada.classList.add('hidden');
         if (navTransaksi) navTransaksi.classList.add('hidden');
@@ -1106,7 +1440,6 @@
         if (mobNavAllReport) mobNavAllReport.classList.add('hidden');
         switchTab('dashboard');
       } else if (role === 'investor') {
-        // INVESTOR: Hanya melihat Dashboard & Report Investor
         if (navDashboard) navDashboard.classList.remove('hidden');
         if (navArmada) navArmada.classList.add('hidden');
         if (navTransaksi) navTransaksi.classList.add('hidden');
@@ -1122,7 +1455,6 @@
         if (mobNavReport) mobNavReport.classList.remove('hidden');
         if (mobNavAllReport) mobNavAllReport.classList.add('hidden');
       } else {
-        // ADMIN: Akses Penuh ke Semua Menu & Fitur
         if (navDashboard) navDashboard.classList.remove('hidden');
         if (navArmada) navArmada.classList.remove('hidden');
         if (navTransaksi) navTransaksi.classList.remove('hidden');
@@ -1139,10 +1471,11 @@
         if (mobNavAllReport) mobNavAllReport.classList.remove('hidden');
       }
 
-      populateReportMobilDropdown();
-      populateDashboardFilterDropdown();
-      populateTransaksiFilterDropdown();
-      loadDashboard();
+      await populateAllFilterDropdowns();
+      await populateReportMobilDropdown();
+      await populateAllReportMobilDropdown();
+      await loadDashboard();
+
       document.getElementById('report-date-stamp').innerText = new Date().toLocaleDateString('id-ID');
       const stampAll = document.getElementById('allreport-date-stamp');
       if (stampAll) stampAll.innerText = new Date().toLocaleDateString('id-ID');
@@ -1163,6 +1496,8 @@
 
     // Switch Tabs Nav
     function switchTab(tab) {
+      currentTab = tab;
+
       // Auto close mobile drawer on tab click
       if (window.innerWidth < 768) {
         const sidebar = document.getElementById('app-sidebar');
@@ -1203,14 +1538,17 @@
         }
       }
 
+      // Sync active global filter to newly opened tab
+      syncFilterSelects(globalActiveFilter);
+
       if (tab === 'dashboard') loadDashboard();
-      if (tab === 'armada') loadArmada();
-      if (tab === 'transaksi') loadTransaksi();
-      if (tab === 'report') {
+      else if (tab === 'armada') loadArmada();
+      else if (tab === 'transaksi') loadTransaksi();
+      else if (tab === 'report') {
         populateReportMobilDropdown();
         loadReport();
       }
-      if (tab === 'all-report') {
+      else if (tab === 'all-report') {
         populateAllReportMobilDropdown();
         loadAllReport();
       }
@@ -1231,7 +1569,9 @@
       }
     }
 
-    // Modal Control Armada
+    // =========================================================================
+    // MODAL CONTROLS
+    // =========================================================================
     function openModalArmada() {
       document.getElementById('modal-armada').classList.remove('hidden');
       document.getElementById('modal-armada').classList.add('flex');
@@ -1241,14 +1581,13 @@
       document.getElementById('modal-armada').classList.remove('flex');
     }
 
-    // Modal Control Transaksi Tambah
     async function openModalTransaksi() {
       try {
         const listMobil = await apiFetch('/api/mobil');
         const select = document.getElementById('trx-mobil-id');
         select.innerHTML = '<option value="">-- Pilih Armada --</option>';
         listMobil.forEach(m => {
-          const isInv = (m.kepemilikan === 'investor' || m.kepemilikan === 'Investor');
+          const isInv = (m.kepemilikan && m.kepemilikan.toLowerCase().includes('investor'));
           const tag = isInv ? '[INVESTOR]' : '[MILIK IBENK TRANS]';
           select.innerHTML += `<option value="${m.id}">${m.nama_mobil} (${m.plat_nomor}) - ${tag}</option>`;
         });
@@ -1270,7 +1609,6 @@
       }
     }
 
-    // Modal Control Transaksi Edit
     async function openEditTransaksi(id) {
       const tx = cachedTransaksiList.find(t => Number(t.id) === Number(id));
       if (!tx) return;
@@ -1280,7 +1618,7 @@
         const select = document.getElementById('edit-trx-mobil-id');
         select.innerHTML = '<option value="">-- Pilih Armada --</option>';
         listMobil.forEach(m => {
-          const isInv = (m.kepemilikan === 'investor' || m.kepemilikan === 'Investor');
+          const isInv = (m.kepemilikan && m.kepemilikan.toLowerCase().includes('investor'));
           const tag = isInv ? '[INVESTOR]' : '[MILIK IBENK TRANS]';
           select.innerHTML += `<option value="${m.id}" ${Number(m.id) === Number(tx.mobil_id) ? 'selected' : ''}>${m.nama_mobil} (${m.plat_nomor}) - ${tag}</option>`;
         });
@@ -1307,16 +1645,20 @@
       document.getElementById('modal-edit-transaksi').classList.remove('flex');
     }
 
-    // Dashboard Loader & Review Arsip
+    // =========================================================================
+    // MODUL 1: DASHBOARD
+    // =========================================================================
     async function loadDashboard() {
       try {
-        await populateDashboardFilterDropdown();
-        const filterSelect = document.getElementById('dashboard-filter-select');
-        const filterVal = filterSelect ? filterSelect.value : 'bulan_ini';
-        const data = await apiFetch(`/api/laporan/dashboard?filter=${filterVal}`);
+        let query = `?filter=${globalActiveFilter}`;
+        if (globalActiveFilter === 'custom' && globalStartDate && globalEndDate) {
+          query += `&start=${globalStartDate}&end=${globalEndDate}`;
+        }
+
+        const data = await apiFetch(`/api/laporan/dashboard${query}`);
         const listMobil = await apiFetch('/api/mobil');
 
-        document.getElementById('card-total-unit').innerText = `${data.summary.total_mobil} Unit`;
+        document.getElementById('card-total-unit').innerText = `${data.summary?.total_mobil || listMobil.length} Unit`;
 
         const isArchived = Boolean(data.periode?.is_archived);
         const archiveBanner = document.getElementById('dashboard-archive-banner');
@@ -1351,7 +1693,7 @@
 
         const lblSuffix = isArchived
           ? `(${data.periode?.bulan || ''} ${data.periode?.tahun || ''})`
-          : (filterVal === 'bulan_ini' ? `(${data.periode?.bulan || 'Bulan Ini'})` : (filterVal === 'hari_ini' ? '(Hari Ini)' : (filterVal === '7_hari' ? '(7 Hari)' : '(Total)')));
+          : (globalActiveFilter === 'bulan_ini' ? `(${data.periode?.bulan || 'Bulan Ini'})` : (globalActiveFilter === 'hari_ini' ? '(Hari Ini)' : (globalActiveFilter === '7_hari' ? '(7 Hari)' : (globalActiveFilter === 'custom' ? `(${globalStartDate} - ${globalEndDate})` : '(Total)'))));
 
         const pEl = document.getElementById('lbl-dash-pendapatan');
         if (pEl) pEl.innerText = `Omset ${lblSuffix}`;
@@ -1369,49 +1711,14 @@
         document.getElementById('card-keuntungan').innerText = formatRp(keuntungan);
 
         renderStatusArmadaWidget(listMobil);
-        renderCharts(data.detail_unit, totalPendapatan, totalBiaya, data.trend_harian);
+        renderCharts(data.detail_unit || [], data.summary || {}, data.trend_harian || {});
       } catch (e) {
         console.error('Error loading dashboard:', e);
       }
     }
 
-    let cachedArchivesList = [];
-
-    async function populateDashboardFilterDropdown() {
-      try {
-        const archives = await apiFetch('/api/riwayat-bulanan');
-        cachedArchivesList = archives || [];
-        const optgroup = document.getElementById('optgroup-riwayat-arsip');
-        if (!optgroup) return;
-
-        const currentVal = document.getElementById('dashboard-filter-select')?.value;
-        optgroup.innerHTML = '';
-
-        if (cachedArchivesList.length === 0) {
-          optgroup.innerHTML = '<option disabled class="text-gray-400">Belum ada riwayat tutup buku</option>';
-          return;
-        }
-
-        cachedArchivesList.forEach(a => {
-          const opt = document.createElement('option');
-          opt.value = `archive:${a.periode}`;
-          opt.innerText = `📁 ${a.nama_bulan} ${a.tahun} (Tutup Buku)`;
-          if (currentVal === `archive:${a.periode}`) {
-            opt.selected = true;
-          }
-          optgroup.appendChild(opt);
-        });
-      } catch (err) {
-        console.warn('Gagal memuat opsi riwayat arsip:', err);
-      }
-    }
-
     function switchDashboardToBulanIni() {
-      const select = document.getElementById('dashboard-filter-select');
-      if (select) {
-        select.value = 'bulan_ini';
-        loadDashboard();
-      }
+      onGlobalFilterChange('dashboard', 'bulan_ini');
     }
 
     async function openModalRiwayatArsip() {
@@ -1482,15 +1789,11 @@
 
     function pilihArsipDariTabel(periode) {
       closeModalRiwayatArsip();
-      const select = document.getElementById('dashboard-filter-select');
-      if (select) {
-        select.value = `archive:${periode}`;
-        loadDashboard();
-      }
+      onGlobalFilterChange('modal', `archive:${periode}`);
     }
 
     async function triggerManualTutupBuku() {
-      const confirmed = confirm('Apakah Anda yakin ingin melakukan proses verifikasi & tutup buku untuk siklus bulan yang telah berakhir?');
+      const confirmed = confirm('Apakah Anda yakin ingin melakukan verifikasi & tutup buku untuk siklus bulan yang telah berakhir?');
       if (!confirmed) return;
 
       const btn = document.getElementById('btn-manual-tutup-buku');
@@ -1502,9 +1805,9 @@
       try {
         const res = await apiFetch('/api/riwayat-bulanan/tutup-buku', { method: 'POST' });
         alert(res.message || 'Tutup buku berhasil dijalankan');
-        await populateDashboardFilterDropdown();
+        await populateAllFilterDropdowns();
         await renderTableRiwayatArsip();
-        await loadDashboard();
+        await refreshAllModules();
       } catch (err) {
         alert('Gagal tutup buku: ' + err.message);
       } finally {
@@ -1515,9 +1818,10 @@
       }
     }
 
-    // Render Widget Real-Time Status Armada
+    // Real-Time Status Armada Widget
     function renderStatusArmadaWidget(dataMobil) {
       const container = document.getElementById('status-armada-container');
+      if (!container) return;
       container.innerHTML = '';
 
       if (!dataMobil || dataMobil.length === 0) {
@@ -1558,19 +1862,22 @@
       });
     }
 
-    // Render Chart.js
-    function renderCharts(details, totPendapatan, totBiaya, trendHarian) {
+    // Render Chart.js dengan Akurasi Skema Bagi Hasil 70:30
+    function renderCharts(details, summary, trendHarian) {
       if (typeof Chart === 'undefined') {
         console.warn('Chart.js belum dimuat atau gagal dimuat dari CDN.');
         return;
       }
-      const labelsBar = details.map(d => d.nama_mobil);
-      const dataPendapatanBar = details.map(d => d.total_pendapatan);
+      const labelsBar = (details || []).map(d => d.nama_mobil);
+      const dataPendapatanBar = (details || []).map(d => d.total_pendapatan || 0);
+
+      const totPendapatan = Number(summary?.total_pendapatan || 0);
+      const totBiaya = Number(summary?.total_biaya || 0);
 
       // Line Chart Real Harian
-      const lineLabels = (trendHarian && trendHarian.labels) || ['Hari Ini'];
-      const linePend = (trendHarian && trendHarian.pendapatan) || [totPendapatan];
-      const lineBiaya = (trendHarian && trendHarian.biaya) || [totBiaya];
+      const lineLabels = (trendHarian && trendHarian.labels && trendHarian.labels.length) ? trendHarian.labels : ['Hari Ini'];
+      const linePend = (trendHarian && trendHarian.pendapatan && trendHarian.pendapatan.length) ? trendHarian.pendapatan : [totPendapatan];
+      const lineBiaya = (trendHarian && trendHarian.biaya && trendHarian.biaya.length) ? trendHarian.biaya : [totBiaya];
 
       if (lineChart) lineChart.destroy();
       const ctxLine = document.getElementById('lineChartHarian');
@@ -1584,7 +1891,19 @@
               { label: 'Biaya Ops', data: lineBiaya, borderColor: '#DC2626', backgroundColor: 'rgba(220,38,38,0.1)', tension: 0.3, fill: true }
             ]
           },
-          options: { responsive: true, maintainAspectRatio: false }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return `${context.dataset.label}: ${formatRp(context.raw)}`;
+                  }
+                }
+              }
+            }
+          }
         });
       }
 
@@ -1598,13 +1917,26 @@
             labels: labelsBar,
             datasets: [{ label: 'Omset per Mobil', data: dataPendapatanBar, backgroundColor: '#16A34A', borderRadius: 4 }]
           },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return `Omset: ${formatRp(context.raw)}`;
+                  }
+                }
+              }
+            }
+          }
         });
       }
 
-      // Doughnut Chart Bagi Hasil
-      const totalInv = details.filter(d => d.kepemilikan === 'Investor').reduce((s, d) => s + d.total_pendapatan, 0);
-      const totalSendiri = details.filter(d => d.kepemilikan !== 'Investor').reduce((s, d) => s + d.total_pendapatan, 0);
+      // Doughnut Chart Bagi Hasil (Porsi Ibenk Trans vs Hak Mitra Investor)
+      const porsiPengelola = Number(summary?.total_porsi_pengelola || 0);
+      const porsiInvestor = Number(summary?.total_porsi_investor || 0);
 
       if (pieChart) pieChart.destroy();
       const ctxPie = document.getElementById('pieChart');
@@ -1612,20 +1944,43 @@
         pieChart = new Chart(ctxPie, {
           type: 'doughnut',
           data: {
-            labels: ['Unit Investor', 'Unit Ibenk Trans'],
-            datasets: [{ data: [totalInv, totalSendiri], backgroundColor: ['#8B5CF6', '#0F4C25'] }]
+            labels: ['Porsi Ibenk Trans (30% + Unit Sendiri)', 'Hak Mitra Investor (70% - Ops)'],
+            datasets: [{
+              data: [porsiPengelola, porsiInvestor],
+              backgroundColor: ['#0F4C25', '#8B5CF6']
+            }]
           },
-          options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const val = Number(context.raw) || 0;
+                    const total = porsiPengelola + porsiInvestor;
+                    const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                    return `${context.label}: ${formatRp(val)} (${pct}%)`;
+                  }
+                }
+              }
+            }
+          }
         });
       }
     }
 
-    // Load & Manage Armada
+    // =========================================================================
+    // MODUL 2: KELOLA ARMADA
+    // =========================================================================
     async function loadArmada() {
       try {
         const list = await apiFetch('/api/mobil');
         const tbody = document.getElementById('tabel-armada');
         const role = localStorage.getItem('role');
+        if (!tbody) return;
         tbody.innerHTML = '';
 
         if (!list || list.length === 0) {
@@ -1634,26 +1989,26 @@
         }
 
         list.forEach(m => {
-          const isInv = (m.kepemilikan === 'investor' || m.kepemilikan === 'Investor');
+          const isInv = (m.kepemilikan && m.kepemilikan.toLowerCase().includes('investor'));
           let badgeStatus = 'bg-green-100 text-green-700 border-green-300';
           let statusLabel = m.status_sewa || 'Tersedia';
 
           if (statusLabel === 'Sewa' || statusLabel === 'Disewa') {
             badgeStatus = 'bg-amber-100 text-amber-700 border-amber-300';
-          } else if (statusLabel === 'Maintenance') {
+          } else if (statusLabel === 'Maintenance' || statusLabel === 'Servis') {
             badgeStatus = 'bg-red-100 text-red-700 border-red-300';
           }
 
           const actionHtml = role === 'admin' ? `
-            <button onclick="openEditMobil(${m.id})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"><i class="fa-solid fa-pen-to-square"></i></button>
-            <button onclick="deleteMobil(${m.id})" class="p-1.5 text-red-600 hover:bg-red-50 rounded transition"><i class="fa-solid fa-trash"></i></button>
+            <button onclick="openEditMobil(${m.id})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition" title="Edit Armada"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button onclick="deleteMobil(${m.id})" class="p-1.5 text-red-600 hover:bg-red-50 rounded transition" title="Hapus Armada"><i class="fa-solid fa-trash"></i></button>
           ` : `<span class="text-xs text-gray-400 italic">Read-only</span>`;
 
           const statusDropdownHtml = role === 'admin' ? `
             <select onchange="updateStatusMobil(${m.id}, this.value)" class="text-xs border rounded px-2 py-1 font-bold ${badgeStatus} focus:outline-none">
               <option value="Tersedia" ${statusLabel === 'Tersedia' ? 'selected' : ''}>🟢 Tersedia</option>
-              <option value="Sewa" ${statusLabel === 'Sewa' || statusLabel === 'Disewa' ? 'selected' : ''}>🟡 Disewa</option>
-              <option value="Maintenance" ${statusLabel === 'Maintenance' ? 'selected' : ''}>🔴 Maintenance</option>
+              <option value="Disewa" ${statusLabel === 'Sewa' || statusLabel === 'Disewa' ? 'selected' : ''}>🟡 Disewa</option>
+              <option value="Maintenance" ${statusLabel === 'Maintenance' || statusLabel === 'Servis' ? 'selected' : ''}>🔴 Maintenance</option>
             </select>
           ` : `
             <span class="px-2 py-1 rounded text-xs font-bold ${badgeStatus}">
@@ -1678,7 +2033,7 @@
           `;
         });
       } catch (e) {
-        console.error(e);
+        console.error('Error load armada:', e);
       }
     }
 
@@ -1720,11 +2075,9 @@
           body: JSON.stringify(body)
         });
         closeModalArmada();
-        await loadArmada();
-        await loadDashboard();
-        populateReportMobilDropdown();
         if (namaEl) namaEl.value = '';
         if (platEl) platEl.value = '';
+        await refreshAllModules();
         alert(res.message || 'Armada mobil berhasil ditambahkan!');
       } catch (err) {
         alert('Gagal menyimpan armada: ' + (err.message || err));
@@ -1777,9 +2130,7 @@
           body: JSON.stringify(body)
         });
         closeModalEditArmada();
-        loadArmada();
-        loadDashboard();
-        populateReportMobilDropdown();
+        await refreshAllModules();
         alert('Data armada berhasil diperbarui!');
       } catch (err) {
         alert(err.message);
@@ -1788,9 +2139,16 @@
 
     async function updateStatusMobil(id, status_sewa) {
       let tgl_kembali = '-';
-      if (status_sewa === 'Sewa' || status_sewa === 'Disewa') {
-        const inputTgl = prompt('Masukkan estimasi tanggal kembali (YYYY-MM-DD) atau kosongkan:');
+      const stLower = (status_sewa || '').toLowerCase();
+      if (stLower === 'sewa' || stLower === 'disewa') {
+        const inputTgl = prompt('Masukkan estimasi tanggal kembali rental (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
         if (inputTgl) tgl_kembali = inputTgl;
+      } else if (stLower === 'maintenance' || stLower === 'servis') {
+        const inputTgl = prompt('Masukkan estimasi tanggal selesai servis (YYYY-MM-DD) atau biarkan kosong:', '');
+        if (inputTgl) tgl_kembali = inputTgl;
+      } else {
+        // Status Tersedia: tanggal kembali otomatis dibersihkan
+        tgl_kembali = '-';
       }
 
       try {
@@ -1798,48 +2156,50 @@
           method: 'PUT',
           body: JSON.stringify({ status_sewa, tgl_kembali })
         });
-        loadArmada();
-        loadDashboard();
+        await refreshAllModules();
       } catch (e) {
-        alert('Gagal mengubah status armada');
+        alert('Gagal mengubah status armada: ' + (e.message || e));
       }
     }
 
     async function deleteMobil(id) {
-      if (!confirm('Yakin ingin menghapus armada ini?')) return;
+      if (!confirm('Yakin ingin menghapus armada ini? Riwayat transaksi unit terkait juga akan dibersihkan.')) return;
       try {
         await apiFetch(`/api/mobil/${id}`, { method: 'DELETE' });
-        loadArmada();
-        loadDashboard();
+        await refreshAllModules();
         alert('Armada berhasil dihapus!');
       } catch (e) {
-        alert('Gagal menghapus armada');
+        alert('Gagal menghapus armada: ' + (e.message || e));
       }
     }
 
-    // Load & Manage Transaksi dengan Dukungan Siklus Bulan & Review Arsip
+    // =========================================================================
+    // MODUL 3: INPUT TRANSAKSI
+    // =========================================================================
     async function loadTransaksi() {
       try {
-        await populateTransaksiFilterDropdown();
-        const filterSelect = document.getElementById('transaksi-filter-select');
-        const filterVal = filterSelect ? filterSelect.value : 'bulan_ini';
+        let query = `?filter=${globalActiveFilter}`;
+        if (globalActiveFilter === 'custom' && globalStartDate && globalEndDate) {
+          query += `&start=${globalStartDate}&end=${globalEndDate}`;
+        }
 
-        const list = await apiFetch(`/api/transaksi?filter=${filterVal}`);
+        const list = await apiFetch(`/api/transaksi${query}`);
         if (Array.isArray(list)) {
           list.sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || '') || (b.id - a.id));
         }
         cachedTransaksiList = list || [];
         const tbody = document.getElementById('tabel-transaksi');
         const role = localStorage.getItem('role');
+        if (!tbody) return;
         tbody.innerHTML = '';
 
         // Status banner & badge
-        const isArchived = filterVal.startsWith('archive:') || filterVal.startsWith('bulan:');
+        const isArchived = globalActiveFilter.startsWith('archive:') || globalActiveFilter.startsWith('bulan:');
         const banner = document.getElementById('transaksi-archive-banner');
         const badge = document.getElementById('transaksi-period-badge');
 
         if (isArchived) {
-          const ym = filterVal.replace(/^(archive:|bulan:)/, '').trim();
+          const ym = globalActiveFilter.replace(/^(archive:|bulan:)/, '').trim();
           const arc = (cachedArchivesList || []).find(a => a.periode === ym);
           const periodName = arc ? `${arc.nama_bulan} ${arc.tahun}` : ym;
 
@@ -1862,13 +2222,13 @@
           }
           if (badge) {
             badge.className = 'inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-0.5 rounded-full border border-emerald-200 shadow-2xs';
-            const labelText = filterVal === 'bulan_ini' ? 'Bulan Ini (Siklus Baru)' : (filterVal === 'hari_ini' ? 'Hari Ini' : (filterVal === '7_hari' ? '7 Hari Terakhir' : 'Semua Transaksi'));
+            const labelText = globalActiveFilter === 'bulan_ini' ? 'Bulan Ini (Siklus Baru)' : (globalActiveFilter === 'hari_ini' ? 'Hari Ini' : (globalActiveFilter === '7_hari' ? '7 Hari Terakhir' : (globalActiveFilter === 'custom' ? `${globalStartDate} s/d ${globalEndDate}` : 'Semua Transaksi')));
             badge.innerHTML = `<i class="fa-solid fa-calendar-check text-emerald-600"></i> Siklus: <b id="transaksi-period-label">${labelText}</b>`;
           }
         }
 
         if (!list || list.length === 0) {
-          const emptyMsg = filterVal === 'bulan_ini'
+          const emptyMsg = globalActiveFilter === 'bulan_ini'
             ? 'Belum ada transaksi di bulan ini (Siklus Baru). Silakan klik <b>+ Input Transaksi Baru</b> untuk memulai pencatatan bulan ini.'
             : 'Belum ada data transaksi pada periode ini.';
           tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-400 font-medium">${emptyMsg}</td></tr>`;
@@ -1902,45 +2262,12 @@
           `;
         });
       } catch (e) {
-        console.error(e);
-      }
-    }
-
-    async function populateTransaksiFilterDropdown() {
-      try {
-        const archives = await apiFetch('/api/riwayat-bulanan');
-        cachedArchivesList = archives || [];
-        const optgroup = document.getElementById('optgroup-transaksi-arsip');
-        if (!optgroup) return;
-
-        const currentVal = document.getElementById('transaksi-filter-select')?.value;
-        optgroup.innerHTML = '';
-
-        if (cachedArchivesList.length === 0) {
-          optgroup.innerHTML = '<option disabled class="text-gray-400">Belum ada riwayat tutup buku</option>';
-          return;
-        }
-
-        cachedArchivesList.forEach(a => {
-          const opt = document.createElement('option');
-          opt.value = `archive:${a.periode}`;
-          opt.innerText = `📁 ${a.nama_bulan} ${a.tahun} (Arsip - ${a.total_transaksi || 0} trx)`;
-          if (currentVal === `archive:${a.periode}`) {
-            opt.selected = true;
-          }
-          optgroup.appendChild(opt);
-        });
-      } catch (err) {
-        console.warn('Gagal memuat opsi riwayat arsip transaksi:', err);
+        console.error('Error load transaksi:', e);
       }
     }
 
     function switchTransaksiToBulanIni() {
-      const select = document.getElementById('transaksi-filter-select');
-      if (select) {
-        select.value = 'bulan_ini';
-        loadTransaksi();
-      }
+      onGlobalFilterChange('transaksi', 'bulan_ini');
     }
 
     async function simpanTransaksi(e) {
@@ -1963,14 +2290,10 @@
           body: JSON.stringify(body)
         });
         closeModalTransaksi();
-        loadTransaksi();
-        loadArmada();
-        loadDashboard();
-        loadReport();
-        loadAllReport();
         e.target.reset();
         document.getElementById('trx-tanggal').valueAsDate = new Date();
         document.getElementById('trx-tgl-kembali').valueAsDate = new Date();
+        await refreshAllModules();
         alert('Transaksi berhasil disimpan & status armada diperbarui secara otomatis!');
       } catch (err) {
         alert(err.message);
@@ -1998,11 +2321,7 @@
           body: JSON.stringify(body)
         });
         closeModalEditTransaksi();
-        loadTransaksi();
-        loadArmada();
-        loadDashboard();
-        loadReport();
-        loadAllReport();
+        await refreshAllModules();
         alert('Transaksi berhasil diperbarui!');
       } catch (err) {
         alert(err.message);
@@ -2013,26 +2332,23 @@
       if (!confirm('Yakin ingin menghapus transaksi ini?')) return;
       try {
         await apiFetch(`/api/transaksi/${id}`, { method: 'DELETE' });
-        loadTransaksi();
-        loadDashboard();
-        loadReport();
-        loadAllReport();
+        await refreshAllModules();
         alert('Transaksi berhasil dihapus!');
       } catch (e) {
         alert('Gagal menghapus transaksi');
       }
     }
 
-    // ==========================================
-    // REPORT INVESTOR HANDLERS
-    // ==========================================
+    // =========================================================================
+    // MODUL 4: REPORT INVESTOR
+    // =========================================================================
     async function populateReportMobilDropdown() {
       try {
         const mobilList = await apiFetch('/api/mobil');
         const select = document.getElementById('report-filter-mobil');
         if (!select) return;
         const currentVal = select.value;
-        const invMobil = (mobilList || []).filter(m => m.kepemilikan && m.kepemilikan.toLowerCase() === 'investor');
+        const invMobil = (mobilList || []).filter(m => m.kepemilikan && m.kepemilikan.toLowerCase().includes('investor'));
         
         select.innerHTML = '<option value="all">🚗 Semua Unit Investor</option>';
         invMobil.forEach(m => {
@@ -2042,46 +2358,41 @@
           select.value = currentVal;
         }
       } catch (e) {
-        console.error('Error populating mobil dropdown:', e);
-      }
-    }
-
-    function onReportFilterChange() {
-      const type = document.getElementById('report-filter-type').value;
-      const customDiv = document.getElementById('custom-date-inputs');
-      if (type === 'custom') {
-        customDiv.classList.remove('hidden');
-      } else {
-        customDiv.classList.add('hidden');
-        loadReport();
+        console.error('Error populating report mobil dropdown:', e);
       }
     }
 
     async function loadReport() {
-      const filterType = document.getElementById('report-filter-type').value;
       const mobilId = document.getElementById('report-filter-mobil')?.value || 'all';
-      let query = `?filter=${filterType}`;
+      let query = `?filter=${globalActiveFilter}`;
       if (mobilId && mobilId !== 'all') {
         query += `&mobil_id=${mobilId}`;
       }
 
       let labelPeriod = 'Semua Waktu';
-      if (filterType === 'hari_ini') labelPeriod = 'Hari Ini';
-      if (filterType === '7_hari') labelPeriod = '7 Hari Terakhir';
-      if (filterType === 'bulan_ini') labelPeriod = 'Bulan Ini';
-      if (filterType === 'custom') {
-        const start = document.getElementById('report-start').value;
-        const end = document.getElementById('report-end').value;
-        if (!start || !end) return;
-        query += `&start=${start}&end=${end}`;
-        labelPeriod = `${start} s/d ${end}`;
+      if (globalActiveFilter === 'hari_ini') labelPeriod = 'Hari Ini';
+      else if (globalActiveFilter === '7_hari') labelPeriod = '7 Hari Terakhir';
+      else if (globalActiveFilter === 'bulan_ini') labelPeriod = 'Bulan Ini (Siklus Berjalan)';
+      else if (globalActiveFilter.startsWith('archive:')) {
+        const ym = globalActiveFilter.replace('archive:', '');
+        const arc = (cachedArchivesList || []).find(a => a.periode === ym);
+        labelPeriod = arc ? `${arc.nama_bulan} ${arc.tahun} (Tutup Buku)` : ym;
+      } else if (globalActiveFilter === 'custom') {
+        if (globalStartDate && globalEndDate) {
+          query += `&start=${globalStartDate}&end=${globalEndDate}`;
+          labelPeriod = `${globalStartDate} s/d ${globalEndDate}`;
+        }
       }
 
-      document.getElementById('report-period-label').innerText = labelPeriod;
+      const pLabel = document.getElementById('report-period-label');
+      if (pLabel) pLabel.innerText = labelPeriod;
+      const dStamp = document.getElementById('report-date-stamp');
+      if (dStamp) dStamp.innerText = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
       try {
         const data = await apiFetch(`/api/laporan/investor${query}`);
         const container = document.getElementById('report-investor-content');
+        if (!container) return;
         container.innerHTML = '';
 
         const list = Array.isArray(data) ? data : (data.detail_unit || []);
@@ -2099,7 +2410,7 @@
           container.innerHTML = `
             <div class="p-12 text-center text-gray-400 font-medium bg-gray-50 rounded-xl border border-dashed border-gray-300">
               <i class="fa-solid fa-inbox text-3xl mb-2 text-gray-300 block"></i>
-              Tidak ada transaksi armada investor yang tercatat untuk periode ini.
+              Tidak ada transaksi armada investor yang tercatat untuk periode ${labelPeriod}.
             </div>
           `;
           return;
@@ -2188,7 +2499,7 @@
           `;
 
           if (txList.length === 0) {
-            html += `<tr><td colspan="8" class="p-4 text-center text-gray-400">Tidak ada rincian transaksi</td></tr>`;
+            html += `<tr><td colspan="8" class="p-4 text-center text-gray-400 font-medium">Tidak ada rincian transaksi sewa pada periode ${labelPeriod}.</td></tr>`;
           } else {
             txList.forEach((tx, txIdx) => {
               const txTarif = Number(tx.tarif_sewa !== undefined ? tx.tarif_sewa : tx.tarif) || 0;
@@ -2250,7 +2561,7 @@
 
         container.innerHTML = html;
       } catch (e) {
-        console.error(e);
+        console.error('Error load report investor:', e);
       }
     }
 
@@ -2274,11 +2585,9 @@
       html2pdf().from(element).set(opt).save();
     }
 
-    // ==========================================
-    // ALL REPORT (KHUSUS ADMIN) HANDLERS
-    // ==========================================
-    let currentAllReportCategory = 'all';
-
+    // =========================================================================
+    // MODUL 5: ALL REPORT (KHUSUS ADMIN)
+    // =========================================================================
     async function populateAllReportMobilDropdown() {
       try {
         const mobilList = await apiFetch('/api/mobil');
@@ -2290,16 +2599,16 @@
         let defaultLabel = '🚗 Semua Unit Armada';
 
         if (currentAllReportCategory === 'investor') {
-          filteredCars = filteredCars.filter(m => m.kepemilikan && m.kepemilikan.toLowerCase() === 'investor');
+          filteredCars = filteredCars.filter(m => m.kepemilikan && m.kepemilikan.toLowerCase().includes('investor'));
           defaultLabel = '🚗 Semua Unit Investor';
         } else if (currentAllReportCategory === 'sendiri') {
-          filteredCars = filteredCars.filter(m => !(m.kepemilikan && m.kepemilikan.toLowerCase() === 'investor'));
+          filteredCars = filteredCars.filter(m => !(m.kepemilikan && m.kepemilikan.toLowerCase().includes('investor')));
           defaultLabel = '🚗 Semua Unit Milik Ibenk Trans';
         }
 
         let optionsHtml = `<option value="all">${defaultLabel}</option>`;
         filteredCars.forEach(m => {
-          const isInv = m.kepemilikan && m.kepemilikan.toLowerCase() === 'investor';
+          const isInv = m.kepemilikan && m.kepemilikan.toLowerCase().includes('investor');
           const tag = currentAllReportCategory === 'all' ? (isInv ? '[Investor] ' : '[Sendiri] ') : '';
           optionsHtml += `<option value="${m.id}">🚗 ${tag}${m.nama_mobil} (${m.plat_nomor})</option>`;
         });
@@ -2330,44 +2639,37 @@
       loadAllReport();
     }
 
-    function onAllReportFilterChange() {
-      const type = document.getElementById('allreport-filter-type').value;
-      const customDiv = document.getElementById('allreport-custom-date-inputs');
-      if (type === 'custom') {
-        customDiv.classList.remove('hidden');
-      } else {
-        customDiv.classList.add('hidden');
-        loadAllReport();
-      }
-    }
-
     async function loadAllReport() {
       const role = localStorage.getItem('role');
       if (role === 'investor') return;
 
-      const filterType = document.getElementById('allreport-filter-type').value;
       const mobilSelect = document.getElementById('allreport-filter-mobil');
       const mobilId = mobilSelect ? (mobilSelect.value || 'all') : 'all';
 
-      let query = `?filter=${filterType}&kategori_unit=${currentAllReportCategory}`;
+      let query = `?filter=${globalActiveFilter}&kategori_unit=${currentAllReportCategory}`;
       if (mobilId && mobilId !== 'all') {
         query += `&mobil_id=${mobilId}`;
       }
 
       let labelPeriod = 'Semua Waktu';
-      if (filterType === 'hari_ini') labelPeriod = 'Hari Ini';
-      if (filterType === '7_hari') labelPeriod = '7 Hari Terakhir';
-      if (filterType === 'bulan_ini') labelPeriod = 'Bulan Ini';
-      if (filterType === 'custom') {
-        const start = document.getElementById('allreport-start').value;
-        const end = document.getElementById('allreport-end').value;
-        if (!start || !end) return;
-        query += `&start=${start}&end=${end}`;
-        labelPeriod = `${start} s/d ${end}`;
+      if (globalActiveFilter === 'hari_ini') labelPeriod = 'Hari Ini';
+      else if (globalActiveFilter === '7_hari') labelPeriod = '7 Hari Terakhir';
+      else if (globalActiveFilter === 'bulan_ini') labelPeriod = 'Bulan Ini (Siklus Berjalan)';
+      else if (globalActiveFilter.startsWith('archive:')) {
+        const ym = globalActiveFilter.replace('archive:', '');
+        const arc = (cachedArchivesList || []).find(a => a.periode === ym);
+        labelPeriod = arc ? `${arc.nama_bulan} ${arc.tahun} (Tutup Buku)` : ym;
+      } else if (globalActiveFilter === 'custom') {
+        if (globalStartDate && globalEndDate) {
+          query += `&start=${globalStartDate}&end=${globalEndDate}`;
+          labelPeriod = `${globalStartDate} s/d ${globalEndDate}`;
+        }
       }
 
-      document.getElementById('allreport-period-label').innerText = labelPeriod;
-      document.getElementById('allreport-date-stamp').innerText = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      const pLabel = document.getElementById('allreport-period-label');
+      if (pLabel) pLabel.innerText = labelPeriod;
+      const dStamp = document.getElementById('allreport-date-stamp');
+      if (dStamp) dStamp.innerText = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
       let catLabel = currentAllReportCategory === 'investor' 
         ? 'Unit Investor (70:30)' 
@@ -2429,12 +2731,12 @@
       try {
         const data = await apiFetch(`/api/laporan/keseluruhan${query}`);
         const tbody = document.getElementById('tabel-all-report');
+        if (!tbody) return;
         tbody.innerHTML = '';
 
         document.getElementById('allreport-summary-pendapatan').innerText = formatRp(data.summary?.total_pendapatan || 0);
         document.getElementById('allreport-summary-biaya').innerText = formatRp(data.summary?.total_biaya || 0);
         
-        // Atur nilai summary laba & pengelola sesuai kategori
         if (currentAllReportCategory === 'investor') {
           document.getElementById('allreport-summary-laba').innerText = formatRp(data.summary?.total_porsi_investor || 0);
           document.getElementById('allreport-summary-pengelola').innerText = formatRp(data.summary?.total_porsi_pengelola || 0);
@@ -2447,7 +2749,6 @@
         const tfoot = document.getElementById('tfoot-all-report');
         const thead = document.getElementById('allreport-thead');
 
-        // Sesuaikan header kolom tabel ringkasan armada sesuai kategori unit
         if (thead) {
           if (currentAllReportCategory === 'sendiri') {
             thead.innerHTML = `
@@ -2489,7 +2790,7 @@
 
         if (list.length === 0) {
           const colSpan = (currentAllReportCategory === 'sendiri' || currentAllReportCategory === 'investor') ? 6 : 8;
-          tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-6 text-center text-gray-400 font-medium"><i class="fa-solid fa-inbox text-2xl mb-2 block"></i> Tidak ada data transaksi armada pada filter ini.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-6 text-center text-gray-400 font-medium"><i class="fa-solid fa-inbox text-2xl mb-2 block"></i> Tidak ada data transaksi armada pada periode ${labelPeriod}.</td></tr>`;
           if (tfoot) tfoot.innerHTML = '';
         } else {
           list.forEach(d => {
@@ -2627,16 +2928,14 @@
           }
         }
 
-        // =========================================================================
-        // RENDER MASTER-DETAIL: RINCIAN TRANSAKSI HARIAN & FREKUENSI PER UNIT MOBIL
-        // =========================================================================
+        // MASTER-DETAIL: RINCIAN TRANSAKSI HARIAN & FREKUENSI PER UNIT MOBIL
         const detailContainer = document.getElementById('allreport-detail-content');
         if (detailContainer) {
           if (list.length === 0) {
             detailContainer.innerHTML = `
               <div class="p-8 text-center text-gray-400 font-medium bg-gray-50 rounded-xl border border-dashed border-gray-300">
                 <i class="fa-solid fa-inbox text-3xl mb-2 text-gray-300 block"></i>
-                Tidak ada rincian transaksi armada pada periode ini (${labelPeriod}).
+                Tidak ada rincian transaksi armada pada periode ${labelPeriod}.
               </div>
             `;
           } else {
@@ -2647,7 +2946,6 @@
               const servis = Number(d.biaya_servis) || 0;
               const lainnya = Number(d.biaya_lainnya) || 0;
               const totBiaya = Number(d.total_biaya) || (bbm + servis + lainnya);
-              const labaBersih = Number(d.laba_bersih) || (totPend - totBiaya);
               const porsiPengelola = Number(d.porsi_pengelola) || 0;
               const porsiInvestor = Number(d.porsi_investor) || 0;
               const txList = d.riwayat_transaksi || [];
@@ -2725,7 +3023,7 @@
                       <td class="p-2.5 font-bold text-gray-800">${tx.penyewa || '-'}</td>
                       <td class="p-2.5 text-right font-bold text-emerald-700">${formatRp(txTarif)}</td>
                       <td class="p-2.5 text-right font-semibold ${txBbm > 0 ? 'text-red-600' : 'text-gray-400'}">${formatRp(txBbm)}</td>
-                      <td class="p-2.5 text-right font-semibold ${txServis > 0 ? 'text-orange-600' : 'text-gray-400'}">${formatRp(txServis)}</td>
+                      <td class="p-2.5 text-right font-semibold ${txServis > 0 ? 'text-orange-600 font-bold' : 'text-gray-400'}">${formatRp(txServis)}</td>
                       <td class="p-2.5 text-right font-semibold ${txLain > 0 ? 'text-gray-700' : 'text-gray-400'}">${formatRp(txLain)}</td>
                       <td class="p-2.5 text-right font-bold text-red-700">${formatRp(txBiaya)}</td>
                       <td class="p-2.5 text-right font-bold ${isInv ? 'text-blue-700' : 'text-custom-green'}">${formatRp(txPeng)}</td>
@@ -2784,7 +3082,7 @@
           }
         }
       } catch (e) {
-        console.error(e);
+        console.error('Error load all report:', e);
       }
     }
 
@@ -2821,7 +3119,9 @@
       html2pdf().from(element).set(opt).save();
     }
 
-    // PWA Service Worker Registration
+    // =========================================================================
+    // PWA & SERVICE WORKER
+    // =========================================================================
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
@@ -2830,7 +3130,6 @@
       });
     }
 
-    // PWA Install Prompt Listener (Android & Chrome Desktop)
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -2861,7 +3160,7 @@
       if (token) {
         initApp();
       } else {
-        logout();
+        showLoginScreen();
       }
     };
   </script>
