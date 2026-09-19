@@ -77,20 +77,23 @@ INSERT INTO users (id, username, password, role) VALUES
 (2, 'investor', 'investor123', 'investor'),
 (3, 'supir', 'supir123', 'supir');
 
--- B. 12 Armada Mobil (10 Investor & 2 Milik Sendiri)
+-- B. 15 Armada Mobil (10 Milik Sendiri & 5 Investor)
 INSERT INTO data_mobil (id, nama_mobil, plat_nomor, tahun, kepemilikan, status_sewa, tgl_kembali) VALUES
-(1, 'Innova Reborn', 'E 1995 VLS', 2022, 'investor', 'Tersedia', '-'),
-(2, 'Fortuner VRZ', 'E 8888 JRC', 2023, 'investor', 'Tersedia', '-'),
-(3, 'Avanza Veloz', 'E 1234 AB', 2022, 'investor', 'Tersedia', '-'),
-(4, 'Xpander Ultimate', 'E 4567 CD', 2023, 'investor', 'Tersedia', '-'),
-(5, 'Innova Zenix Hybrid', 'E 7890 EF', 2024, 'investor', 'Tersedia', '-'),
-(6, 'Pajero Sport Dakar', 'E 2345 GH', 2023, 'investor', 'Tersedia', '-'),
-(7, 'Toyota Hiace Commuter', 'E 6789 IJ', 2021, 'investor', 'Tersedia', '-'),
-(8, 'Toyota Alphard Gen 3', 'E 1111 KL', 2020, 'investor', 'Tersedia', '-'),
-(9, 'Honda HR-V RS', 'E 3333 MN', 2023, 'investor', 'Tersedia', '-'),
-(10, 'Toyota Calya', 'E 5555 OP', 2022, 'investor', 'Tersedia', '-'),
-(11, 'Toyota Avanza G', 'E 1001 JRC', 2022, 'sendiri', 'Tersedia', '-'),
-(12, 'Toyota Hiace Premio', 'E 1002 JRC', 2023, 'sendiri', 'Tersedia', '-');
+(1, 'Brio Merah Matic', 'E 1128 WN', 2026, 'sendiri', 'Tersedia', '-'),
+(2, 'Brio Lemon', 'E 1569 WM', 2025, 'sendiri', 'Tersedia', '-'),
+(3, 'Brio Merah', 'E 1215 WN', 2026, 'sendiri', 'Tersedia', '-'),
+(4, 'Brio Putih MT', 'E 1884 WK', 2023, 'sendiri', 'Tersedia', '-'),
+(5, 'Brio Merah MT', 'E 1326 WL', 2024, 'sendiri', 'Tersedia', '-'),
+(6, 'Brio Merah AT', 'E 1636 WL', 2024, 'sendiri', 'Tersedia', '-'),
+(7, 'Avanza New', 'E 1426 WN', 2026, 'sendiri', 'Tersedia', '-'),
+(8, 'Avanza New', 'E 1761 WM', 2025, 'sendiri', 'Tersedia', '-'),
+(9, 'Sigra Silver', 'E 1536 WI', 2022, 'sendiri', 'Tersedia', '-'),
+(10, 'Sigra Grey Matic', 'E 1475 DZ', 2023, 'investor', 'Tersedia', '-'),
+(11, 'Pick Up Futura', 'E 1809 VL', 2021, 'sendiri', 'Tersedia', '-'),
+(12, 'Pick Up Gran Max', 'E 8859 VN', 2023, 'investor', 'Tersedia', '-'),
+(13, 'Sigra Putih Manual', 'E 1896 WD', 2023, 'investor', 'Tersedia', '-'),
+(14, 'Brio Lemon Matic', 'E 1058 WL', 2023, 'investor', 'Tersedia', '-'),
+(15, 'Sigra Putih Manual 1.0', 'E 1425 WI', 2022, 'investor', 'Tersedia', '-');
 
 -- C. 20 Transaksi Riil Seminggu
 INSERT INTO data_transaksi (id, mobil_id, tanggal, tgl_mulai, tgl_kembali, penyewa, tarif, tarif_sewa, biaya_bbm, biaya_servis, biaya_lainnya, keterangan) VALUES

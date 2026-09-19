@@ -19,7 +19,143 @@
       "role": "supir"
     }
   ],
-  "dataMobil": [],
+  "dataMobil": [
+    {
+      "id": 1,
+      "nama_mobil": "Brio Merah Matic",
+      "plat_nomor": "E 1128 WN",
+      "tahun": 2026,
+      "kepemilikan": "sendiri",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    },
+    {
+      "id": 2,
+      "nama_mobil": "Brio Lemon",
+      "plat_nomor": "E 1569 WM",
+      "tahun": 2025,
+      "kepemilikan": "sendiri",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    },
+    {
+      "id": 3,
+      "nama_mobil": "Brio Merah",
+      "plat_nomor": "E 1215 WN",
+      "tahun": 2026,
+      "kepemilikan": "sendiri",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    },
+    {
+      "id": 4,
+      "nama_mobil": "Brio Putih MT",
+      "plat_nomor": "E 1884 WK",
+      "tahun": 2023,
+      "kepemilikan": "sendiri",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    },
+    {
+      "id": 5,
+      "nama_mobil": "Brio Merah MT",
+      "plat_nomor": "E 1326 WL",
+      "tahun": 2024,
+      "kepemilikan": "sendiri",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    },
+    {
+      "id": 6,
+      "nama_mobil": "Brio Merah AT",
+      "plat_nomor": "E 1636 WL",
+      "tahun": 2024,
+      "kepemilikan": "sendiri",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    },
+    {
+      "id": 7,
+      "nama_mobil": "Avanza New",
+      "plat_nomor": "E 1426 WN",
+      "tahun": 2026,
+      "kepemilikan": "sendiri",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    },
+    {
+      "id": 8,
+      "nama_mobil": "Avanza New",
+      "plat_nomor": "E 1761 WM",
+      "tahun": 2025,
+      "kepemilikan": "sendiri",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    },
+    {
+      "id": 9,
+      "nama_mobil": "Sigra Silver",
+      "plat_nomor": "E 1536 WI",
+      "tahun": 2022,
+      "kepemilikan": "sendiri",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    },
+    {
+      "id": 10,
+      "nama_mobil": "Sigra Grey Matic",
+      "plat_nomor": "E 1475 DZ",
+      "tahun": 2023,
+      "kepemilikan": "investor",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    },
+    {
+      "id": 11,
+      "nama_mobil": "Pick Up Futura",
+      "plat_nomor": "E 1809 VL",
+      "tahun": 2021,
+      "kepemilikan": "sendiri",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    },
+    {
+      "id": 12,
+      "nama_mobil": "Pick Up Gran Max",
+      "plat_nomor": "E 8859 VN",
+      "tahun": 2023,
+      "kepemilikan": "investor",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    },
+    {
+      "id": 13,
+      "nama_mobil": "Sigra Putih Manual",
+      "plat_nomor": "E 1896 WD",
+      "tahun": 2023,
+      "kepemilikan": "investor",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    },
+    {
+      "id": 14,
+      "nama_mobil": "Brio Lemon Matic",
+      "plat_nomor": "E 1058 WL",
+      "tahun": 2023,
+      "kepemilikan": "investor",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    },
+    {
+      "id": 15,
+      "nama_mobil": "Sigra Putih Manual 1.0",
+      "plat_nomor": "E 1425 WI",
+      "tahun": 2022,
+      "kepemilikan": "investor",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-"
+    }
+  ],
   "dataTransaksi": [],
   "riwayatBulanan": []
 }
