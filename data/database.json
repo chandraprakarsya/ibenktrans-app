@@ -98,8 +98,8 @@
       "plat_nomor": "E 1128 WN",
       "tahun": 2026,
       "kepemilikan": "sendiri",
-      "status_sewa": "Disewa",
-      "tgl_kembali": "2026-09-22",
+      "status_sewa": "Tersedia",
+      "tgl_kembali": "-",
       "created_at": "2026-09-20T18:05:32.191Z"
     },
     {
@@ -243,21 +243,6 @@
       "created_at": "2026-09-20T18:05:32.629Z"
     }
   ],
-  "dataTransaksi": [
-    {
-      "id": 1,
-      "mobil_id": 1,
-      "tanggal": "2026-09-21",
-      "tgl_mulai": "2026-09-21",
-      "tgl_kembali": "2026-09-22",
-      "penyewa": "Test User Sesi",
-      "tarif": 450000,
-      "tarif_sewa": 450000,
-      "biaya_bbm": 50000,
-      "biaya_servis": 0,
-      "biaya_lainnya": 0,
-      "keterangan": "Uji Coba Sesi"
-    }
-  ],
+  "dataTransaksi": [],
   "riwayatBulanan": []
 }
