@@ -998,6 +998,19 @@
       }
     }
 
+    let silentRefreshTimer = null;
+
+    async function silentRefreshData() {
+      // Hanya lakukan sinkronisasi background jika pengguna aktif (tidak idle)
+      // dan berada di tab Dashboard atau Armada.
+      const activeMenu = document.querySelector('.menu-btn.bg-blue-800');
+      if (activeMenu) {
+        const id = activeMenu.id;
+        if (id === 'menu-dashboard') await loadDashboard();
+        if (id === 'menu-armada') await loadArmada();
+      }
+    }
+
     function startIdleTracker() {
       // Set timestamp awal aktivitas
       const now = Date.now();
@@ -1013,6 +1026,10 @@
       if (idleCheckTimer) clearInterval(idleCheckTimer);
       idleCheckTimer = setInterval(checkIdleStatus, 10000);
 
+      // Interval sinkronisasi data live setiap 15 detik
+      if (silentRefreshTimer) clearInterval(silentRefreshTimer);
+      silentRefreshTimer = setInterval(silentRefreshData, 15000);
+
       // Tangani saat tab browser dibuka kembali dari background / sleep mode
       document.addEventListener('visibilitychange', onVisibilityOrFocusChange);
       window.addEventListener('focus', onVisibilityOrFocusChange);
@@ -1025,6 +1042,10 @@
       if (idleCheckTimer) {
         clearInterval(idleCheckTimer);
         idleCheckTimer = null;
+      }
+      if (silentRefreshTimer) {
+        clearInterval(silentRefreshTimer);
+        silentRefreshTimer = null;
       }
       document.removeEventListener('visibilitychange', onVisibilityOrFocusChange);
       window.removeEventListener('focus', onVisibilityOrFocusChange);
@@ -1849,6 +1870,7 @@
         return;
       }
 
+      let htmlStr = '';
       dataMobil.forEach(m => {
         let statusBg = 'bg-green-50 border-green-200 text-green-700';
         let statusBadge = 'bg-green-500';
@@ -1865,7 +1887,7 @@
           icon = 'fa-wrench';
         }
 
-        container.innerHTML += `
+        htmlStr += `
           <div class="p-3 rounded-lg border ${statusBg} flex items-center justify-between">
             <div>
               <p class="font-bold text-gray-800 text-xs">${m.nama_mobil}</p>
@@ -1880,6 +1902,7 @@
           </div>
         `;
       });
+      container.innerHTML = htmlStr;
     }
 
     // Render Chart.js dengan Akurasi Skema Bagi Hasil 70:30
@@ -2008,6 +2031,7 @@
           return;
         }
 
+        let htmlStr = '';
         list.forEach(m => {
           const isInv = (m.kepemilikan && m.kepemilikan.toLowerCase().includes('investor'));
           let badgeStatus = 'bg-green-100 text-green-700 border-green-300';
@@ -2036,7 +2060,7 @@
             </span>
           `;
 
-          tbody.innerHTML += `
+          htmlStr += `
             <tr class="hover:bg-gray-50 border-b border-gray-100">
               <td class="p-3 font-bold text-gray-800">${m.nama_mobil}</td>
               <td class="p-3 font-mono text-gray-600">${m.plat_nomor}</td>
@@ -2052,6 +2076,7 @@
             </tr>
           `;
         });
+        tbody.innerHTML = htmlStr;
       } catch (e) {
         console.error('Error load armada:', e);
       }

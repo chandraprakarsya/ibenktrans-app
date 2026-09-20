@@ -34,10 +34,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 function getLocalDateStr(date) {
   const d = date ? (date instanceof Date ? date : new Date(date)) : new Date();
   if (isNaN(d.getTime())) return new Date().toISOString().split('T')[0];
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  return formatter.format(d);
 }
 
 const DATA_DIR = path.join(__dirname, 'data');
@@ -112,15 +115,27 @@ if (rawConnStr) {
       pool = candidatePool;
       await ensureDatabaseSchema(pool);
     }).catch(err => {
-      console.warn(`⚠️ Gagal terhubung ke Supabase (${err.message}). Menggunakan penyimpanan lokal database.json.`);
+      console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+      console.error(`CRITICAL ERROR: Gagal terhubung ke Supabase (${err.message})!`);
+      console.error('Data akan disimpan di memori sementara (database.json).');
+      console.error('Jika deploy di Vercel, data akan HILANG saat server restart!');
+      console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
       pool = null;
     });
   } catch (err) {
-    console.warn(`⚠️ Inisialisasi pool PostgreSQL gagal (${err.message}). Menggunakan database.json.`);
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    console.error(`CRITICAL ERROR: Inisialisasi pool PostgreSQL gagal (${err.message}).`);
+    console.error('Jika deploy di Vercel, data akan HILANG saat server restart!');
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
     pool = null;
   }
 } else {
-  console.log('DATABASE_URL tidak diset, menggunakan penyimpanan lokal database.json');
+  console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+  console.error('CRITICAL ERROR: DATABASE_URL tidak diset di Environment Variables!');
+  console.error('Jika deploy di Vercel, data akan HILANG saat server restart.');
+  console.error('Harap set DATABASE_URL di dashboard Vercel Anda.');
+  console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+  console.log('Menggunakan penyimpanan lokal database.json sebagai fallback sementara.');
 }
 
 // Memastikan skema tabel Supabase lengkap & menyinkronkan data cache dua arah
