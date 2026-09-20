@@ -17,6 +17,78 @@
       "username": "supir",
       "password": "supir123",
       "role": "supir"
+    },
+    {
+      "id": 4,
+      "username": "user_audit_1786963019349",
+      "password": "password123",
+      "role": "investor"
+    },
+    {
+      "id": 5,
+      "username": "candra",
+      "password": "P@ssw0rd",
+      "role": "admin"
+    },
+    {
+      "id": 6,
+      "username": "adila",
+      "password": "P@ssw0rd",
+      "role": "admin"
+    },
+    {
+      "id": 7,
+      "username": "nida",
+      "password": "P@ssw0rd.123",
+      "role": "admin"
+    },
+    {
+      "id": 8,
+      "username": "jrctrans",
+      "password": "P@ssw0rd.123",
+      "role": "admin"
+    },
+    {
+      "id": 9,
+      "username": "driver",
+      "password": "P@ssw0rd",
+      "role": "supir"
+    },
+    {
+      "id": 10,
+      "username": "investor26",
+      "password": "investor2026",
+      "role": "investor"
+    },
+    {
+      "id": 11,
+      "username": "supir26",
+      "password": "supirjrc2026",
+      "role": "supir"
+    },
+    {
+      "id": 12,
+      "username": "maman2026",
+      "password": "Mekarsari2026",
+      "role": "admin"
+    },
+    {
+      "id": 13,
+      "username": "umi2026",
+      "password": "umijrc2026",
+      "role": "admin"
+    },
+    {
+      "id": 14,
+      "username": "Agus",
+      "password": "Kj7p@ssok3",
+      "role": "supir"
+    },
+    {
+      "id": 15,
+      "username": "CEO.istri",
+      "password": "Kj7p@ssok3",
+      "role": "admin"
     }
   ],
   "dataMobil": [
@@ -26,8 +98,9 @@
       "plat_nomor": "E 1128 WN",
       "tahun": 2026,
       "kepemilikan": "sendiri",
-      "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "status_sewa": "Disewa",
+      "tgl_kembali": "2026-09-22",
+      "created_at": "2026-09-20T18:05:32.191Z"
     },
     {
       "id": 2,
@@ -36,7 +109,8 @@
       "tahun": 2025,
       "kepemilikan": "sendiri",
       "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "tgl_kembali": "-",
+      "created_at": "2026-09-20T18:05:32.227Z"
     },
     {
       "id": 3,
@@ -45,7 +119,8 @@
       "tahun": 2026,
       "kepemilikan": "sendiri",
       "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "tgl_kembali": "-",
+      "created_at": "2026-09-20T18:05:32.258Z"
     },
     {
       "id": 4,
@@ -54,7 +129,8 @@
       "tahun": 2023,
       "kepemilikan": "sendiri",
       "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "tgl_kembali": "-",
+      "created_at": "2026-09-20T18:05:32.287Z"
     },
     {
       "id": 5,
@@ -63,7 +139,8 @@
       "tahun": 2024,
       "kepemilikan": "sendiri",
       "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "tgl_kembali": "-",
+      "created_at": "2026-09-20T18:05:32.320Z"
     },
     {
       "id": 6,
@@ -72,7 +149,8 @@
       "tahun": 2024,
       "kepemilikan": "sendiri",
       "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "tgl_kembali": "-",
+      "created_at": "2026-09-20T18:05:32.352Z"
     },
     {
       "id": 7,
@@ -81,7 +159,8 @@
       "tahun": 2026,
       "kepemilikan": "sendiri",
       "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "tgl_kembali": "-",
+      "created_at": "2026-09-20T18:05:32.383Z"
     },
     {
       "id": 8,
@@ -90,7 +169,8 @@
       "tahun": 2025,
       "kepemilikan": "sendiri",
       "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "tgl_kembali": "-",
+      "created_at": "2026-09-20T18:05:32.412Z"
     },
     {
       "id": 9,
@@ -99,7 +179,8 @@
       "tahun": 2022,
       "kepemilikan": "sendiri",
       "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "tgl_kembali": "-",
+      "created_at": "2026-09-20T18:05:32.444Z"
     },
     {
       "id": 10,
@@ -108,7 +189,8 @@
       "tahun": 2023,
       "kepemilikan": "investor",
       "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "tgl_kembali": "-",
+      "created_at": "2026-09-20T18:05:32.474Z"
     },
     {
       "id": 11,
@@ -117,7 +199,8 @@
       "tahun": 2021,
       "kepemilikan": "sendiri",
       "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "tgl_kembali": "-",
+      "created_at": "2026-09-20T18:05:32.505Z"
     },
     {
       "id": 12,
@@ -126,7 +209,8 @@
       "tahun": 2023,
       "kepemilikan": "investor",
       "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "tgl_kembali": "-",
+      "created_at": "2026-09-20T18:05:32.537Z"
     },
     {
       "id": 13,
@@ -135,7 +219,8 @@
       "tahun": 2023,
       "kepemilikan": "investor",
       "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "tgl_kembali": "-",
+      "created_at": "2026-09-20T18:05:32.568Z"
     },
     {
       "id": 14,
@@ -144,7 +229,8 @@
       "tahun": 2023,
       "kepemilikan": "investor",
       "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "tgl_kembali": "-",
+      "created_at": "2026-09-20T18:05:32.599Z"
     },
     {
       "id": 15,
@@ -153,9 +239,25 @@
       "tahun": 2022,
       "kepemilikan": "investor",
       "status_sewa": "Tersedia",
-      "tgl_kembali": "-"
+      "tgl_kembali": "-",
+      "created_at": "2026-09-20T18:05:32.629Z"
     }
   ],
-  "dataTransaksi": [],
+  "dataTransaksi": [
+    {
+      "id": 1,
+      "mobil_id": 1,
+      "tanggal": "2026-09-21",
+      "tgl_mulai": "2026-09-21",
+      "tgl_kembali": "2026-09-22",
+      "penyewa": "Test User Sesi",
+      "tarif": 450000,
+      "tarif_sewa": 450000,
+      "biaya_bbm": 50000,
+      "biaya_servis": 0,
+      "biaya_lainnya": 0,
+      "keterangan": "Uji Coba Sesi"
+    }
+  ],
   "riwayatBulanan": []
 }

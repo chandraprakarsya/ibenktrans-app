@@ -4,7 +4,11 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Pastikan tipe data DATE PostgreSQL (OID 1082) selalu dibaca sebagai string 'YYYY-MM-DD'
+// tanpa terpengaruh pergeseran timezone UTC vs WIB
+types.setTypeParser(1082, str => str);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,6 +16,15 @@ const SECRET_KEY = process.env.JWT_SECRET || 'secret_key_ibenktrans_majalengka';
 
 app.use(cors());
 app.use(express.json());
+
+// Anti-cache header agar browser dan client tidak pernah menyajikan data kadaluarsa
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ===================================================
@@ -25,33 +38,6 @@ function getLocalDateStr(date) {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-}
-
-let pool = null;
-if (process.env.DATABASE_URL) {
-  try {
-    const candidatePool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-      connectionTimeoutMillis: 2500,
-      idleTimeoutMillis: 30000,
-      max: 10
-    });
-    // Uji koneksi tanpa memblokir startup; pool aktif hanya jika ping sukses
-    candidatePool.query('SELECT 1').then(() => {
-      console.log('✓ Terhubung ke Supabase PostgreSQL Cloud Database');
-      pool = candidatePool;
-    }).catch(err => {
-      console.warn(`⚠️ Gagal terhubung ke Supabase (${err.message}). Menggunakan penyimpanan lokal database.json.`);
-      try { candidatePool.end(); } catch(_) {}
-      pool = null;
-    });
-  } catch (err) {
-    console.warn(`⚠️ Inisialisasi pool PostgreSQL gagal (${err.message}). Menggunakan database.json.`);
-    pool = null;
-  }
-} else {
-  console.log('DATABASE_URL tidak diset, menggunakan penyimpanan lokal database.json');
 }
 
 const DATA_DIR = path.join(__dirname, 'data');
@@ -99,41 +85,231 @@ function saveLocalDatabase() {
   }
 }
 
-// Database Abstraction Layer (Supabase PG / Local JSON dengan Auto Fallback)
+// Inisialisasi Pool Supabase dengan otomatisasi koneksi pooler IPv4
+let pool = null;
+let rawConnStr = process.env.DATABASE_URL;
+
+// Normalisasi URL: Jika menggunakan direct db.*.supabase.co (IPv6-only), konversi ke connection pooler yang kompatibel IPv4/IPv6
+if (rawConnStr && rawConnStr.includes('db.dzhhxtcrtpfzlyuojjqe.supabase.co')) {
+  rawConnStr = rawConnStr.replace(
+    'postgres:HgiwayXToKmgLgc9@db.dzhhxtcrtpfzlyuojjqe.supabase.co:5432/postgres',
+    'postgres.dzhhxtcrtpfzlyuojjqe:HgiwayXToKmgLgc9@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres'
+  );
+}
+
+if (rawConnStr) {
+  try {
+    const candidatePool = new Pool({
+      connectionString: rawConnStr,
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 30000,
+      max: 10
+    });
+
+    candidatePool.query('SELECT 1').then(async () => {
+      console.log('✓ Terhubung ke Supabase PostgreSQL Cloud Database');
+      pool = candidatePool;
+      await ensureDatabaseSchema(pool);
+    }).catch(err => {
+      console.warn(`⚠️ Gagal terhubung ke Supabase (${err.message}). Menggunakan penyimpanan lokal database.json.`);
+      pool = null;
+    });
+  } catch (err) {
+    console.warn(`⚠️ Inisialisasi pool PostgreSQL gagal (${err.message}). Menggunakan database.json.`);
+    pool = null;
+  }
+} else {
+  console.log('DATABASE_URL tidak diset, menggunakan penyimpanan lokal database.json');
+}
+
+// Memastikan skema tabel Supabase lengkap & menyinkronkan data cache dua arah
+async function ensureDatabaseSchema(p) {
+  try {
+    await p.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        password VARCHAR(100) NOT NULL,
+        role VARCHAR(20) NOT NULL DEFAULT 'investor',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS data_mobil (
+        id SERIAL PRIMARY KEY,
+        nama_mobil VARCHAR(100) NOT NULL,
+        plat_nomor VARCHAR(30) UNIQUE NOT NULL,
+        tahun INT DEFAULT 2025,
+        kepemilikan VARCHAR(20) NOT NULL DEFAULT 'investor',
+        status_sewa VARCHAR(20) DEFAULT 'Tersedia',
+        tgl_kembali VARCHAR(30) DEFAULT '-',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS data_transaksi (
+        id SERIAL PRIMARY KEY,
+        mobil_id INT REFERENCES data_mobil(id) ON DELETE CASCADE,
+        tanggal DATE NOT NULL,
+        tgl_mulai DATE,
+        tgl_kembali DATE,
+        penyewa VARCHAR(100) DEFAULT '-',
+        tarif NUMERIC DEFAULT 0,
+        tarif_sewa NUMERIC DEFAULT 0,
+        biaya_bbm NUMERIC DEFAULT 0,
+        biaya_servis NUMERIC DEFAULT 0,
+        biaya_lainnya NUMERIC DEFAULT 0,
+        keterangan TEXT DEFAULT '-',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS riwayat_bulanan (
+        id SERIAL PRIMARY KEY,
+        periode VARCHAR(7) UNIQUE NOT NULL,
+        nama_bulan VARCHAR(30) NOT NULL,
+        tahun INT NOT NULL,
+        total_transaksi INT DEFAULT 0,
+        total_pendapatan NUMERIC DEFAULT 0,
+        total_biaya NUMERIC DEFAULT 0,
+        total_keuntungan_bersih NUMERIC DEFAULT 0,
+        total_porsi_pengelola NUMERIC DEFAULT 0,
+        total_porsi_investor NUMERIC DEFAULT 0,
+        rincian_biaya JSONB DEFAULT '{}',
+        rincian_unit JSONB DEFAULT '[]',
+        status VARCHAR(20) DEFAULT 'closed',
+        closed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        closed_by VARCHAR(50) DEFAULT 'SYSTEM_AUTO'
+      );
+    `);
+
+    // Jika data_mobil di Supabase kosong, masukkan data armada awal dari database.json
+    const countRes = await p.query('SELECT COUNT(*) FROM data_mobil');
+    const mobilCount = parseInt(countRes.rows[0].count, 10);
+    if (mobilCount === 0 && localDB.dataMobil && localDB.dataMobil.length > 0) {
+      console.log(`Menyinkronkan ${localDB.dataMobil.length} armada awal ke Supabase...`);
+      for (const m of localDB.dataMobil) {
+        await p.query(
+          'INSERT INTO data_mobil (id, nama_mobil, plat_nomor, tahun, kepemilikan, status_sewa, tgl_kembali) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (plat_nomor) DO NOTHING',
+          [m.id, m.nama_mobil, m.plat_nomor, m.tahun, m.kepemilikan, m.status_sewa || 'Tersedia', m.tgl_kembali || '-']
+        );
+      }
+      await p.query("SELECT setval('data_mobil_id_seq', (SELECT COALESCE(MAX(id), 1) FROM data_mobil))");
+    }
+
+    // Sinkronisasi data dari Supabase ke localDB (cache offline agar kedua database selalu 100% identik)
+    await syncFromSupabaseToLocal(p);
+  } catch (err) {
+    console.error('Peringatan saat inisialisasi skema Supabase:', err.message);
+  }
+}
+
+async function syncFromSupabaseToLocal(p) {
+  try {
+    const uRes = await p.query('SELECT id, username, password, role FROM users ORDER BY id ASC');
+    if (uRes.rows.length > 0) localDB.users = uRes.rows;
+
+    const mRes = await p.query('SELECT id, nama_mobil, plat_nomor, tahun, kepemilikan, status_sewa, tgl_kembali FROM data_mobil ORDER BY id ASC');
+    if (mRes.rows.length > 0) {
+      localDB.dataMobil = mRes.rows.map(m => ({ ...m, id: Number(m.id), tahun: Number(m.tahun) || 2025 }));
+    }
+
+    const tRes = await p.query('SELECT * FROM data_transaksi ORDER BY tanggal DESC, id DESC');
+    if (tRes.rows.length > 0) {
+      localDB.dataTransaksi = tRes.rows.map(t => {
+        const tglStr = t.tanggal instanceof Date ? getLocalDateStr(t.tanggal) : String(t.tanggal);
+        const tglMulaiStr = t.tgl_mulai instanceof Date ? getLocalDateStr(t.tgl_mulai) : (t.tgl_mulai ? String(t.tgl_mulai) : tglStr);
+        const tglKembaliStr = t.tgl_kembali instanceof Date ? getLocalDateStr(t.tgl_kembali) : (t.tgl_kembali ? String(t.tgl_kembali) : tglStr);
+        return {
+          id: Number(t.id),
+          mobil_id: Number(t.mobil_id),
+          tanggal: tglStr,
+          tgl_mulai: tglMulaiStr,
+          tgl_kembali: tglKembaliStr,
+          penyewa: t.penyewa || '-',
+          tarif: Number(t.tarif) || 0,
+          tarif_sewa: Number(t.tarif_sewa || t.tarif) || 0,
+          biaya_bbm: Number(t.biaya_bbm) || 0,
+          biaya_servis: Number(t.biaya_servis) || 0,
+          biaya_lainnya: Number(t.biaya_lainnya) || 0,
+          keterangan: t.keterangan || '-'
+        };
+      });
+    } else if (localDB.dataTransaksi && localDB.dataTransaksi.length > 0) {
+      // Supabase masih kosong, unggah data transaksi lokal ke Supabase
+      for (const t of localDB.dataTransaksi) {
+        await p.query(
+          'INSERT INTO data_transaksi (mobil_id, tanggal, tgl_mulai, tgl_kembali, penyewa, tarif, tarif_sewa, biaya_bbm, biaya_servis, biaya_lainnya, keterangan) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
+          [t.mobil_id, t.tanggal, t.tgl_mulai || t.tanggal, t.tgl_kembali || t.tanggal, t.penyewa, t.tarif || t.tarif_sewa, t.tarif_sewa || t.tarif, t.biaya_bbm, t.biaya_servis, t.biaya_lainnya, t.keterangan]
+        );
+      }
+      console.log(`✓ Mengunggah ${localDB.dataTransaksi.length} transaksi lokal ke Supabase PostgreSQL.`);
+    }
+
+    const rRes = await p.query('SELECT * FROM riwayat_bulanan ORDER BY periode DESC');
+    if (rRes.rows.length > 0) {
+      localDB.riwayatBulanan = rRes.rows.map(r => ({
+        ...r,
+        id: Number(r.id),
+        tahun: Number(r.tahun),
+        total_transaksi: Number(r.total_transaksi),
+        total_pendapatan: Number(r.total_pendapatan),
+        total_biaya: Number(r.total_biaya),
+        total_keuntungan_bersih: Number(r.total_keuntungan_bersih),
+        total_porsi_pengelola: Number(r.total_porsi_pengelola),
+        total_porsi_investor: Number(r.total_porsi_investor)
+      }));
+    } else if (localDB.riwayatBulanan && localDB.riwayatBulanan.length > 0) {
+      for (const r of localDB.riwayatBulanan) {
+        await p.query(
+          'INSERT INTO riwayat_bulanan (periode, tahun, bulan, nama_bulan, total_transaksi, total_pendapatan, total_biaya, total_keuntungan_bersih, total_porsi_pengelola, total_porsi_investor, data_transaksi_snapshot, ringkasan_unit, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
+          [r.periode, r.tahun, r.bulan, r.nama_bulan, r.total_transaksi, r.total_pendapatan, r.total_biaya, r.total_keuntungan_bersih, r.total_porsi_pengelola, r.total_porsi_investor, JSON.stringify(r.data_transaksi_snapshot || []), JSON.stringify(r.ringkasan_unit || []), r.created_at || new Date().toISOString()]
+        );
+      }
+    }
+
+    saveLocalDatabase();
+    console.log(`✓ Sinkronisasi cloud berhasil: ${localDB.dataMobil.length} armada, ${localDB.dataTransaksi.length} transaksi, ${localDB.riwayatBulanan.length} arsip.`);
+  } catch (err) {
+    console.warn('Gagal sinkronisasi data dari Supabase ke lokal:', err.message);
+  }
+}
+
+// Database Abstraction Layer dengan Dual-Write (Supabase PG + Local JSON selalu sinkron)
 const dbService = {
   async getUserByUsername(username) {
     if (pool) {
       try {
         const res = await pool.query('SELECT * FROM users WHERE LOWER(username) = LOWER($1)', [username.trim()]);
-        return res.rows[0] || null;
+        if (res.rows[0]) return res.rows[0];
       } catch (err) {
-        console.warn(`⚠️ Gagal query users ke Supabase (${err.message}), beralih ke database lokal.`);
-        pool = null;
+        console.warn(`⚠️ Gagal query users ke Supabase (${err.message}), membaca dari database lokal.`);
       }
     }
     return localDB.users.find(u => u.username.toLowerCase() === username.toLowerCase().trim()) || null;
   },
 
   async addUser(user) {
+    let pgRow = null;
     if (pool) {
       try {
         const res = await pool.query(
           'INSERT INTO users (username, password, role) VALUES ($1, $2, $3) RETURNING id, username, role',
           [user.username.trim(), user.password.trim(), user.role]
         );
-        return res.rows[0];
+        pgRow = res.rows[0];
       } catch (err) {
-        console.warn(`⚠️ Gagal insert user ke Supabase (${err.message}), beralih ke database lokal.`);
-        pool = null;
+        console.warn(`⚠️ Gagal insert user ke Supabase (${err.message}), menyimpan ke database lokal.`);
       }
     }
+    const newId = pgRow ? Number(pgRow.id) : (localDB.users.length > 0 ? localDB.users[localDB.users.length - 1].id + 1 : 1);
     const newUser = {
-      id: localDB.users.length > 0 ? localDB.users[localDB.users.length - 1].id + 1 : 1,
+      id: newId,
       username: user.username.trim(),
       password: user.password.trim(),
       role: user.role
     };
-    localDB.users.push(newUser);
+    const existIdx = localDB.users.findIndex(u => u.username.toLowerCase() === newUser.username.toLowerCase());
+    if (existIdx !== -1) {
+      localDB.users[existIdx] = newUser;
+    } else {
+      localDB.users.push(newUser);
+    }
     saveLocalDatabase();
     return newUser;
   },
@@ -142,44 +318,52 @@ const dbService = {
     if (pool) {
       try {
         const res = await pool.query('SELECT * FROM data_mobil ORDER BY id ASC');
-        return res.rows.map(m => ({
+        const list = res.rows.map(m => ({
           ...m,
           id: Number(m.id),
-          tahun: Number(m.tahun) || 2022
+          tahun: Number(m.tahun) || 2025
         }));
+        localDB.dataMobil = list;
+        return list;
       } catch (err) {
-        console.warn(`⚠️ Gagal query mobil ke Supabase (${err.message}), beralih ke database lokal.`);
-        pool = null;
+        console.warn(`⚠️ Gagal query mobil ke Supabase (${err.message}), membaca dari database lokal.`);
       }
     }
     return localDB.dataMobil.map(m => ({
       ...m,
       id: Number(m.id),
-      tahun: Number(m.tahun) || 2022
+      tahun: Number(m.tahun) || 2025
     }));
   },
 
   async addMobil(m) {
+    let pgRow = null;
     if (pool) {
       try {
         const res = await pool.query(
           'INSERT INTO data_mobil (nama_mobil, plat_nomor, tahun, kepemilikan, status_sewa, tgl_kembali) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
           [m.nama_mobil, m.plat_nomor, m.tahun, m.kepemilikan, m.status_sewa || 'Tersedia', m.tgl_kembali || '-']
         );
-        const row = res.rows[0];
-        return { ...row, id: Number(row.id), tahun: Number(row.tahun) || 2022 };
+        pgRow = res.rows[0];
       } catch (err) {
-        console.warn(`⚠️ Gagal insert mobil ke Supabase (${err.message}), beralih ke database lokal.`);
-        pool = null;
+        console.warn(`⚠️ Gagal insert mobil ke Supabase (${err.message}), menyimpan ke database lokal.`);
       }
     }
     const maxId = localDB.dataMobil.length > 0 ? Math.max(...localDB.dataMobil.map(mob => Number(mob.id) || 0)) : 0;
+    const newId = pgRow ? Number(pgRow.id) : (maxId + 1);
     const newMobil = {
-      id: maxId + 1,
       ...m,
-      id: maxId + 1
+      id: newId,
+      tahun: Number(m.tahun) || 2025,
+      status_sewa: m.status_sewa || 'Tersedia',
+      tgl_kembali: m.tgl_kembali || '-'
     };
-    localDB.dataMobil.push(newMobil);
+    const existIdx = localDB.dataMobil.findIndex(mob => Number(mob.id) === newId);
+    if (existIdx !== -1) {
+      localDB.dataMobil[existIdx] = newMobil;
+    } else {
+      localDB.dataMobil.push(newMobil);
+    }
     saveLocalDatabase();
     return newMobil;
   },
@@ -188,17 +372,12 @@ const dbService = {
     const numId = Number(id);
     if (pool) {
       try {
-        const res = await pool.query(
-          'UPDATE data_mobil SET status_sewa = $1, tgl_kembali = $2 WHERE id = $3 RETURNING *',
+        await pool.query(
+          'UPDATE data_mobil SET status_sewa = $1, tgl_kembali = $2 WHERE id = $3',
           [status_sewa, tgl_kembali || '-', numId]
         );
-        if (res.rows.length > 0) {
-          const row = res.rows[0];
-          return { ...row, id: Number(row.id) };
-        }
       } catch (err) {
         console.warn(`⚠️ Gagal update status mobil ke Supabase (${err.message}), beralih ke database lokal.`);
-        pool = null;
       }
     }
     const idx = localDB.dataMobil.findIndex(m => Number(m.id) === numId);
@@ -215,17 +394,12 @@ const dbService = {
     const numId = Number(id);
     if (pool) {
       try {
-        const res = await pool.query(
-          'UPDATE data_mobil SET nama_mobil = $1, plat_nomor = $2, tahun = $3, kepemilikan = $4, status_sewa = COALESCE($5, status_sewa), tgl_kembali = COALESCE($6, tgl_kembali) WHERE id = $7 RETURNING *',
+        await pool.query(
+          'UPDATE data_mobil SET nama_mobil = $1, plat_nomor = $2, tahun = $3, kepemilikan = $4, status_sewa = COALESCE($5, status_sewa), tgl_kembali = COALESCE($6, tgl_kembali) WHERE id = $7',
           [m.nama_mobil, m.plat_nomor, m.tahun, m.kepemilikan, m.status_sewa, m.tgl_kembali, numId]
         );
-        if (res.rows.length > 0) {
-          const row = res.rows[0];
-          return { ...row, id: Number(row.id) };
-        }
       } catch (err) {
         console.warn(`⚠️ Gagal update mobil ke Supabase (${err.message}), beralih ke database lokal.`);
-        pool = null;
       }
     }
     const idx = localDB.dataMobil.findIndex(mob => Number(mob.id) === numId);
@@ -242,10 +416,8 @@ const dbService = {
     if (pool) {
       try {
         await pool.query('DELETE FROM data_mobil WHERE id = $1', [numId]);
-        return true;
       } catch (err) {
         console.warn(`⚠️ Gagal delete mobil ke Supabase (${err.message}), beralih ke database lokal.`);
-        pool = null;
       }
     }
     localDB.dataMobil = localDB.dataMobil.filter(m => Number(m.id) !== numId);
@@ -258,11 +430,10 @@ const dbService = {
     if (pool) {
       try {
         const res = await pool.query('SELECT * FROM data_transaksi ORDER BY tanggal DESC, id DESC');
-        return res.rows.map(t => {
+        const list = res.rows.map(t => {
           const tglStr = t.tanggal instanceof Date ? getLocalDateStr(t.tanggal) : String(t.tanggal);
           const tglMulaiStr = t.tgl_mulai instanceof Date ? getLocalDateStr(t.tgl_mulai) : (t.tgl_mulai ? String(t.tgl_mulai) : tglStr);
           const tglKembaliStr = t.tgl_kembali instanceof Date ? getLocalDateStr(t.tgl_kembali) : (t.tgl_kembali ? String(t.tgl_kembali) : tglStr);
-
           return {
             id: Number(t.id),
             mobil_id: Number(t.mobil_id),
@@ -278,9 +449,10 @@ const dbService = {
             keterangan: t.keterangan || '-'
           };
         });
+        localDB.dataTransaksi = list;
+        return list;
       } catch (err) {
-        console.warn(`⚠️ Gagal query transaksi ke Supabase (${err.message}), beralih ke database lokal.`);
-        pool = null;
+        console.warn(`⚠️ Gagal query transaksi ke Supabase (${err.message}), membaca dari database lokal.`);
       }
     }
     return [...localDB.dataTransaksi]
@@ -298,28 +470,23 @@ const dbService = {
   },
 
   async addTransaksi(t) {
+    let pgRow = null;
     if (pool) {
       try {
         const res = await pool.query(
           'INSERT INTO data_transaksi (mobil_id, tanggal, tgl_mulai, tgl_kembali, penyewa, tarif, tarif_sewa, biaya_bbm, biaya_servis, biaya_lainnya, keterangan) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
           [t.mobil_id, t.tanggal, t.tgl_mulai, t.tgl_kembali, t.penyewa, t.tarif, t.tarif_sewa, t.biaya_bbm, t.biaya_servis, t.biaya_lainnya, t.keterangan]
         );
-        const row = res.rows[0];
-        return {
-          ...row,
-          id: Number(row.id),
-          mobil_id: Number(row.mobil_id),
-          tanggal: row.tanggal instanceof Date ? getLocalDateStr(row.tanggal) : String(row.tanggal)
-        };
+        pgRow = res.rows[0];
       } catch (err) {
-        console.warn(`⚠️ Gagal insert transaksi ke Supabase (${err.message}), beralih ke database lokal.`);
-        pool = null;
+        console.warn(`⚠️ Gagal insert transaksi ke Supabase (${err.message}), menyimpan ke database lokal.`);
       }
     }
     const maxId = localDB.dataTransaksi.length > 0 ? Math.max(...localDB.dataTransaksi.map(tx => Number(tx.id) || 0)) : 0;
+    const newId = pgRow ? Number(pgRow.id) : (maxId + 1);
     const newTx = {
       ...t,
-      id: maxId + 1,
+      id: newId,
       mobil_id: Number(t.mobil_id),
       tarif: Number(t.tarif) || 0,
       tarif_sewa: Number(t.tarif_sewa || t.tarif) || 0,
@@ -327,7 +494,12 @@ const dbService = {
       biaya_servis: Number(t.biaya_servis) || 0,
       biaya_lainnya: Number(t.biaya_lainnya) || 0
     };
-    localDB.dataTransaksi.push(newTx);
+    const existIdx = localDB.dataTransaksi.findIndex(tx => Number(tx.id) === newId);
+    if (existIdx !== -1) {
+      localDB.dataTransaksi[existIdx] = newTx;
+    } else {
+      localDB.dataTransaksi.push(newTx);
+    }
     saveLocalDatabase();
     return newTx;
   },
@@ -336,22 +508,12 @@ const dbService = {
     const numId = Number(id);
     if (pool) {
       try {
-        const res = await pool.query(
-          'UPDATE data_transaksi SET mobil_id = $1, tanggal = $2, tgl_mulai = $3, tgl_kembali = $4, penyewa = $5, tarif = $6, tarif_sewa = $7, biaya_bbm = $8, biaya_servis = $9, biaya_lainnya = $10, keterangan = $11 WHERE id = $12 RETURNING *',
+        await pool.query(
+          'UPDATE data_transaksi SET mobil_id = $1, tanggal = $2, tgl_mulai = $3, tgl_kembali = $4, penyewa = $5, tarif = $6, tarif_sewa = $7, biaya_bbm = $8, biaya_servis = $9, biaya_lainnya = $10, keterangan = $11 WHERE id = $12',
           [t.mobil_id, t.tanggal, t.tgl_mulai, t.tgl_kembali, t.penyewa, t.tarif, t.tarif_sewa, t.biaya_bbm, t.biaya_servis, t.biaya_lainnya, t.keterangan, numId]
         );
-        if (res.rows.length > 0) {
-          const row = res.rows[0];
-          return {
-            ...row,
-            id: Number(row.id),
-            mobil_id: Number(row.mobil_id),
-            tanggal: row.tanggal instanceof Date ? getLocalDateStr(row.tanggal) : String(row.tanggal)
-          };
-        }
       } catch (err) {
         console.warn(`⚠️ Gagal update transaksi ke Supabase (${err.message}), beralih ke database lokal.`);
-        pool = null;
       }
     }
     const idx = localDB.dataTransaksi.findIndex(tx => Number(tx.id) === numId);
@@ -373,10 +535,8 @@ const dbService = {
     if (pool) {
       try {
         await pool.query('DELETE FROM data_transaksi WHERE id = $1', [numId]);
-        return true;
       } catch (err) {
         console.warn(`⚠️ Gagal delete transaksi ke Supabase (${err.message}), beralih ke database lokal.`);
-        pool = null;
       }
     }
     localDB.dataTransaksi = localDB.dataTransaksi.filter(t => Number(t.id) !== numId);
@@ -388,7 +548,7 @@ const dbService = {
     if (pool) {
       try {
         const res = await pool.query('SELECT * FROM riwayat_bulanan ORDER BY periode DESC');
-        return res.rows.map(r => ({
+        const list = res.rows.map(r => ({
           ...r,
           id: Number(r.id),
           tahun: Number(r.tahun),
@@ -399,9 +559,10 @@ const dbService = {
           total_porsi_pengelola: Number(r.total_porsi_pengelola),
           total_porsi_investor: Number(r.total_porsi_investor)
         }));
+        localDB.riwayatBulanan = list;
+        return list;
       } catch (err) {
-        console.warn(`⚠️ Gagal query riwayat_bulanan ke Supabase (${err.message}), beralih ke database lokal.`);
-        pool = null;
+        console.warn(`⚠️ Gagal query riwayat_bulanan ke Supabase (${err.message}), membaca dari database lokal.`);
       }
     }
     if (!localDB.riwayatBulanan) localDB.riwayatBulanan = [];
@@ -428,8 +589,7 @@ const dbService = {
         }
         return null;
       } catch (err) {
-        console.warn(`⚠️ Gagal query riwayat_bulanan by periode ke Supabase (${err.message}), beralih ke database lokal.`);
-        pool = null;
+        console.warn(`⚠️ Gagal query riwayat_bulanan by periode ke Supabase (${err.message}), membaca dari database lokal.`);
       }
     }
     if (!localDB.riwayatBulanan) localDB.riwayatBulanan = [];
@@ -439,7 +599,7 @@ const dbService = {
   async addRiwayatBulanan(item) {
     if (pool) {
       try {
-        const res = await pool.query(
+        await pool.query(
           `INSERT INTO riwayat_bulanan (
             periode, nama_bulan, tahun, total_transaksi, total_pendapatan, total_biaya,
             total_keuntungan_bersih, total_porsi_pengelola, total_porsi_investor,
@@ -456,8 +616,7 @@ const dbService = {
             rincian_unit = EXCLUDED.rincian_unit,
             status = EXCLUDED.status,
             closed_at = EXCLUDED.closed_at,
-            closed_by = EXCLUDED.closed_by
-          RETURNING *`,
+            closed_by = EXCLUDED.closed_by`,
           [
             item.periode, item.nama_bulan, item.tahun, item.total_transaksi || 0,
             item.total_pendapatan || 0, item.total_biaya || 0, item.total_keuntungan_bersih || 0,
@@ -466,10 +625,8 @@ const dbService = {
             item.status || 'closed', item.closed_at || new Date().toISOString(), item.closed_by || 'SYSTEM_AUTO'
           ]
         );
-        if (res.rows.length > 0) return res.rows[0];
       } catch (err) {
         console.warn(`⚠️ Gagal insert riwayat_bulanan ke Supabase (${err.message}), beralih ke database lokal.`);
-        pool = null;
       }
     }
     if (!localDB.riwayatBulanan) localDB.riwayatBulanan = [];
@@ -545,7 +702,7 @@ async function checkAndAutoArchiveMonthly(forcedDate = null) {
         const totalBia = bbm + srv + lnn;
         const labaBersih = pend - totalBia;
 
-        const isInv = m.kepemilikan && m.kepemilikan.toLowerCase() === 'investor';
+        const isInv = m.kepemilikan && m.kepemilikan.toLowerCase().includes('investor');
         const pPengelola = isInv ? Math.round(pend * 0.30) : labaBersih;
         const pInvestor = isInv ? (Math.round(pend * 0.70) - totalBia) : 0;
 
@@ -1068,7 +1225,7 @@ app.get('/api/laporan/dashboard', authenticateToken, async (req, res) => {
       total_pendapatan += pend;
       total_biaya += bia;
 
-      const isInv = m.kepemilikan && m.kepemilikan.toLowerCase() === 'investor';
+      const isInv = m.kepemilikan && m.kepemilikan.toLowerCase().includes('investor');
       const porsi_pengelola = isInv ? Math.round(pend * 0.30) : laba_bersih;
       const porsi_investor = isInv ? (Math.round(pend * 0.70) - bia) : 0;
 

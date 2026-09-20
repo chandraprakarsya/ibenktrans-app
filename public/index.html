@@ -1093,6 +1093,16 @@
       localStorage.removeItem('username');
       localStorage.removeItem('ibenk_last_activity');
 
+      // Reset state & memory caches
+      cachedTransaksiList = [];
+      cachedArchivesList = [];
+      currentTab = 'dashboard';
+
+      // Pastikan seluruh container tab disembunyikan dan dikembalikan ke dashboard
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      const dashSec = document.getElementById('tab-dashboard');
+      if (dashSec) dashSec.classList.remove('hidden');
+
       showLoginScreen();
 
       if (reason === 'idle') {
@@ -1120,16 +1130,22 @@
       triggerLogout('manual');
     }
 
-    // Helper API Fetch dengan Penanganan Token Expired Otomatis
+    // Helper API Fetch dengan Penanganan Token Expired Otomatis & Anti-Cache
     async function apiFetch(url, options = {}) {
       const token = localStorage.getItem('token');
       const headers = {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         ...options.headers
       };
 
-      const res = await fetch(`${BASE_URL}${url}`, { ...options, headers });
+      const res = await fetch(`${BASE_URL}${url}`, {
+        cache: 'no-store',
+        ...options,
+        headers
+      });
       if (res.status === 401 || res.status === 403) {
         const errData = await res.json().catch(() => ({}));
         if (token) {
@@ -1350,6 +1366,7 @@
       await populateReportMobilDropdown();
       await populateAllReportMobilDropdown();
       await loadArmada();
+      await loadDashboard();
       await refreshActiveTab();
     }
 
@@ -1438,7 +1455,6 @@
         if (mobNavTransaksi) mobNavTransaksi.classList.add('hidden');
         if (mobNavReport) mobNavReport.classList.add('hidden');
         if (mobNavAllReport) mobNavAllReport.classList.add('hidden');
-        switchTab('dashboard');
       } else if (role === 'investor') {
         if (navDashboard) navDashboard.classList.remove('hidden');
         if (navArmada) navArmada.classList.add('hidden');
@@ -1471,10 +1487,14 @@
         if (mobNavAllReport) mobNavAllReport.classList.remove('hidden');
       }
 
+      // Pastikan navigasi selalu diarahkan ke dashboard saat baru login
+      switchTab('dashboard');
+
       await populateAllFilterDropdowns();
       await populateReportMobilDropdown();
       await populateAllReportMobilDropdown();
       await loadDashboard();
+      await loadArmada();
 
       document.getElementById('report-date-stamp').innerText = new Date().toLocaleDateString('id-ID');
       const stampAll = document.getElementById('allreport-date-stamp');
