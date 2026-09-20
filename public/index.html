@@ -1002,13 +1002,12 @@
 
     async function silentRefreshData() {
       // Hanya lakukan sinkronisasi background jika pengguna aktif (tidak idle)
-      // dan berada di tab Dashboard atau Armada.
-      const activeMenu = document.querySelector('.menu-btn.bg-blue-800');
-      if (activeMenu) {
-        const id = activeMenu.id;
-        if (id === 'menu-dashboard') await loadDashboard();
-        if (id === 'menu-armada') await loadArmada();
-      }
+      // dan refresh aktifkan tab yang sedang terbuka
+      if (currentTab === 'dashboard') await loadDashboard();
+      if (currentTab === 'armada') await loadArmada();
+      if (currentTab === 'transaksi') await loadTransaksi();
+      if (currentTab === 'report') await loadReport();
+      if (currentTab === 'all-report') await loadAllReport();
     }
 
     function startIdleTracker() {
@@ -1388,7 +1387,9 @@
       await populateAllReportMobilDropdown();
       await loadArmada();
       await loadDashboard();
-      await refreshActiveTab();
+      await loadTransaksi();
+      await loadReport();
+      await loadAllReport();
     }
 
     // =========================================================================
@@ -2320,6 +2321,7 @@
       const body = {
         mobil_id: document.getElementById('trx-mobil-id').value,
         tanggal: document.getElementById('trx-tanggal').value,
+        tgl_mulai: document.getElementById('trx-tanggal').value,
         tgl_kembali: document.getElementById('trx-tgl-kembali').value || document.getElementById('trx-tanggal').value,
         penyewa: document.getElementById('trx-penyewa').value,
         tarif_sewa: Number(document.getElementById('trx-tarif').value) || 0,

@@ -430,6 +430,7 @@ const dbService = {
     const numId = Number(id);
     if (pool) {
       try {
+        await pool.query('DELETE FROM data_transaksi WHERE mobil_id = $1', [numId]);
         await pool.query('DELETE FROM data_mobil WHERE id = $1', [numId]);
       } catch (err) {
         console.warn(`⚠️ Gagal delete mobil ke Supabase (${err.message}), beralih ke database lokal.`);
