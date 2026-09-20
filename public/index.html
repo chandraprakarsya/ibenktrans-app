@@ -226,7 +226,7 @@
               <button onclick="openModalRiwayatArsip()" id="btn-arsip-modal" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 font-bold transition flex items-center gap-1.5 hover:bg-amber-100 active:scale-95 border border-amber-200 text-xs shadow-xs" title="Riwayat Arsip Bulanan & Tutup Buku">
                 <i class="fa-solid fa-box-archive text-amber-700"></i> <span class="hidden sm:inline">Riwayat Arsip</span>
               </button>
-              <button onclick="refreshDashboardClick()" id="btn-refresh-dashboard" class="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 font-bold transition flex items-center gap-1.5 hover:bg-green-100 active:scale-95 border border-green-200 text-xs shadow-xs">
+              <button type="button" onclick="refreshDashboardClick()" id="btn-refresh-dashboard" class="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 font-bold transition flex items-center gap-1.5 hover:bg-green-100 active:scale-95 border border-green-200 text-xs shadow-xs">
                 <i id="icon-refresh" class="fa-solid fa-rotate-right"></i> Refresh
               </button>
             </div>
@@ -1601,7 +1601,7 @@
       const statusBadge = document.getElementById('dashboard-refresh-status');
       
       if (icon) icon.classList.add('fa-spin');
-      await loadDashboard();
+      await refreshAllModules();
       if (icon) icon.classList.remove('fa-spin');
 
       if (statusBadge) {
