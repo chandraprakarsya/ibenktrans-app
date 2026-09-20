@@ -102,7 +102,7 @@ if (rawConnStr && rawConnStr.includes('db.dzhhxtcrtpfzlyuojjqe.supabase.co')) {
 
 if (rawConnStr) {
   try {
-    const candidatePool = new Pool({
+    pool = new Pool({
       connectionString: rawConnStr,
       ssl: { rejectUnauthorized: false },
       connectionTimeoutMillis: 5000,
@@ -110,17 +110,10 @@ if (rawConnStr) {
       max: 10
     });
 
-    candidatePool.query('SELECT 1').then(async () => {
-      console.log('✓ Terhubung ke Supabase PostgreSQL Cloud Database');
-      pool = candidatePool;
-      await ensureDatabaseSchema(pool);
-    }).catch(err => {
-      console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-      console.error(`CRITICAL ERROR: Gagal terhubung ke Supabase (${err.message})!`);
-      console.error('Data akan disimpan di memori sementara (database.json).');
-      console.error('Jika deploy di Vercel, data akan HILANG saat server restart!');
-      console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-      pool = null;
+    console.log('✓ Inisialisasi Pool Supabase selesai');
+    // Jalankan schema sync di background
+    ensureDatabaseSchema(pool).catch(err => {
+      console.error('Peringatan saat inisialisasi skema Supabase:', err.message);
     });
   } catch (err) {
     console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
