@@ -92,15 +92,26 @@ function saveLocalDatabase() {
 let pool = null;
 let rawConnStr = process.env.DATABASE_URL;
 
-// Normalisasi URL: Jika menggunakan direct db.*.supabase.co (IPv6-only), konversi ke connection pooler yang kompatibel IPv4/IPv6
-if (rawConnStr && rawConnStr.includes('db.dzhhxtcrtpfzlyuojjqe.supabase.co')) {
-  rawConnStr = rawConnStr.replace(
-    'postgres:HgiwayXToKmgLgc9@db.dzhhxtcrtpfzlyuojjqe.supabase.co:5432/postgres',
-    'postgres.dzhhxtcrtpfzlyuojjqe:HgiwayXToKmgLgc9@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres'
-  );
+// Validasi Environment (Mencegah Connection Bleed)
+const appName = process.env.APP_NAME;
+if (!appName) {
+  console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+  console.error('CRITICAL ERROR: Variabel APP_NAME belum diset di Vercel!');
+  console.error('Silakan set APP_NAME=IBENK (untuk Ibenk Trans) atau APP_NAME=JRC (untuk JRC Trans)');
+  console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+  process.exit(1);
 }
 
 if (rawConnStr) {
+  // Mencegah JRC menggunakan database Ibenk Trans
+  if (appName === 'JRC' && rawConnStr.includes('dzhhxtcrtpfzlyuojjqe')) {
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    console.error('CRITICAL ERROR: JRC Trans terdeteksi menggunakan DATABASE_URL milik Ibenk Trans!');
+    console.error('Silakan ganti DATABASE_URL di dashboard Vercel JRC Trans menggunakan URL Supabase JRC yang baru.');
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    process.exit(1);
+  }
+
   try {
     pool = new Pool({
       connectionString: rawConnStr,

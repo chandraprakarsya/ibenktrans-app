@@ -73,15 +73,15 @@ const BASE_URL = window.location.origin;
       // Throttle pencatatan aktivitas maksimal 1x per 2 detik demi performa tinggi
       if (now - lastActivityThrottle > 2000) {
         lastActivityThrottle = now;
-        localStorage.setItem('ibenk_last_activity', now.toString());
+        localStorage.setItem('IBENK_last_activity', now.toString());
       }
     }
 
     function checkIdleStatus() {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('IBENK_token');
       if (!token) return;
 
-      const lastActivity = Number(localStorage.getItem('ibenk_last_activity') || Date.now());
+      const lastActivity = Number(localStorage.getItem('IBENK_last_activity') || Date.now());
       const idleDuration = Date.now() - lastActivity;
 
       if (idleDuration >= IDLE_TIMEOUT_MS) {
@@ -98,7 +98,7 @@ const BASE_URL = window.location.origin;
     function startIdleTracker() {
       // Set timestamp awal aktivitas
       const now = Date.now();
-      localStorage.setItem('ibenk_last_activity', now.toString());
+      localStorage.setItem('IBENK_last_activity', now.toString());
       lastActivityThrottle = now;
 
       // Pasang event listener aktivitas pengguna
@@ -193,10 +193,10 @@ const BASE_URL = window.location.origin;
     function triggerLogout(reason = 'manual') {
       stopIdleTracker();
 
-      localStorage.removeItem('token');
-      localStorage.removeItem('role');
-      localStorage.removeItem('username');
-      localStorage.removeItem('ibenk_last_activity');
+      localStorage.removeItem('IBENK_token'); localStorage.removeItem('token');
+      localStorage.removeItem('IBENK_role'); localStorage.removeItem('role');
+      localStorage.removeItem('IBENK_username'); localStorage.removeItem('username');
+      localStorage.removeItem('IBENK_last_activity'); localStorage.removeItem('ibenk_last_activity');
 
       // Reset state & memory caches
       cachedTransaksiList = [];
@@ -237,7 +237,7 @@ const BASE_URL = window.location.origin;
 
     // Helper API Fetch dengan Penanganan Token Expired Otomatis & Anti-Cache
     async function apiFetch(url, options = {}) {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('IBENK_token');
       const headers = {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -289,10 +289,10 @@ const BASE_URL = window.location.origin;
 
         if (!res.ok) throw new Error(data.error || 'Gagal login');
 
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('role', data.role);
-        localStorage.setItem('username', data.username);
-        localStorage.setItem('ibenk_last_activity', Date.now().toString());
+        localStorage.setItem('IBENK_token', data.token);
+        localStorage.setItem('IBENK_role', data.role);
+        localStorage.setItem('IBENK_username', data.username);
+        localStorage.setItem('IBENK_last_activity', Date.now().toString());
 
         if (passwordInput) passwordInput.value = '';
 
@@ -487,14 +487,14 @@ const BASE_URL = window.location.origin;
         });
       }
 
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('IBENK_token');
       if (!token) {
         showLoginScreen();
         return;
       }
 
       // 1. Periksa apakah sesi sebelumnya sudah inaktif melebihi batas 15 menit
-      const lastAct = Number(localStorage.getItem('ibenk_last_activity') || 0);
+      const lastAct = Number(localStorage.getItem('IBENK_last_activity') || 0);
       if (lastAct && (Date.now() - lastAct >= IDLE_TIMEOUT_MS)) {
         triggerLogout('idle');
         return;
@@ -515,8 +515,8 @@ const BASE_URL = window.location.origin;
       // 3. Aktifkan sistem pemantau aktivitas (idle tracker)
       startIdleTracker();
 
-      const role = (localStorage.getItem('role') || 'admin').toLowerCase();
-      const username = localStorage.getItem('username') || 'User';
+      const role = (localStorage.getItem('IBENK_role') || 'admin').toLowerCase();
+      const username = localStorage.getItem('IBENK_username') || 'User';
 
       document.getElementById('auth-container').classList.add('hidden');
       document.getElementById('app-container').classList.remove('hidden');
@@ -1116,7 +1116,7 @@ const BASE_URL = window.location.origin;
         const list = window.AppState.data.mobil;
         if (!list) return;
         const tbody = document.getElementById('tabel-armada');
-        const role = localStorage.getItem('role');
+        const role = localStorage.getItem('IBENK_role');
         if (!tbody) return;
         tbody.innerHTML = '';
 
@@ -1329,7 +1329,7 @@ const BASE_URL = window.location.origin;
         }
         cachedTransaksiList = list || [];
         const tbody = document.getElementById('tabel-transaksi');
-        const role = localStorage.getItem('role');
+        const role = localStorage.getItem('IBENK_role');
         if (!tbody) return;
         tbody.innerHTML = '';
 
@@ -1782,7 +1782,7 @@ const BASE_URL = window.location.origin;
     }
 
     async function loadAllReport() {
-      const role = localStorage.getItem('role');
+      const role = localStorage.getItem('IBENK_role');
       if (role === 'investor') return;
 
       const mobilSelect = document.getElementById('allreport-filter-mobil');
@@ -2299,7 +2299,7 @@ const BASE_URL = window.location.origin;
 
     // Auto Init on Startup
     window.onload = function() {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('IBENK_token');
       if (token) {
         initApp();
       } else {
