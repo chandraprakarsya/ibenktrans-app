@@ -1871,7 +1871,7 @@ const BASE_URL = window.location.origin;
       }
 
       try {
-        const data = window.AppState.data.admin;
+        const data = await apiFetch('/api/laporan/keseluruhan' + query);
         if (!data) return;
         const tbody = document.getElementById('tabel-all-report');
         if (!tbody) return;
